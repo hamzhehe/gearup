@@ -17,6 +17,8 @@ const walletRoutes = require('./routes/walletRoutes');
 
 // Load env vars
 dotenv.config();
+const { prepareGoogleCredentials } = require('./utils/prepareGoogleCredentials');
+prepareGoogleCredentials();
 
 // Connect to database and start server
 const startServer = async () => {

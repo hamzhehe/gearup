@@ -36,12 +36,12 @@ npm run dev
 ## Deploy to Railway (backend)
 
 1. New project → Deploy from GitHub → select `gearup`
-2. **Settings → Root Directory → `backend`**
+2. Leave **Root Directory** empty (repo root) — `Dockerfile` + `railway.toml` build `backend/` automatically
 3. **Variables** tab — add from `backend/.env.example`:
    - `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRE`, `NODE_ENV=production`
    - `EMAIL_USER`, `EMAIL_PASS` (optional)
-   - For Dialogflow: upload service account JSON as a Railway secret file, or set `GOOGLE_APPLICATION_CREDENTIALS`
-4. Redeploy
+   - For Dialogflow: set `GOOGLE_CREDENTIALS_JSON` to the full service-account JSON (one line), or `GOOGLE_APPLICATION_CREDENTIALS` if using a mounted file
+4. Redeploy — health check: `/api/health`
 
 ## Health check
 
