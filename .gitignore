@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Google Cloud service account keys
+backend/config/*.json
+!backend/config/.gitkeep
+
+# Next.js build output
+frontend-next/.next/
+frontend-next/out/
+
+# Backend uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

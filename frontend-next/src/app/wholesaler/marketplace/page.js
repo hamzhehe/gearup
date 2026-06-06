@@ -1,0 +1,715 @@
+"use client";
+
+import { getApiBaseUrl } from '@/lib/api';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+    Search,
+    Filter,
+    MapPin,
+    CheckCircle,
+    Package,
+    ShoppingCart,
+    MessageCircle,
+    Clock,
+    AlertCircle,
+    ChevronDown,
+    X,
+    FilterX,
+    TrendingUp,
+    Shield,
+    Sparkles
+} from 'lucide-react';
+import PageShell from '@/components/dashboard/PageShell';
+import PageHeader from '@/components/dashboard/PageHeader';
+import { useAuth } from '@/context/AuthContext';
+import SponsoredProducts from '@/components/ads/SponsoredProducts';
+import { AD_SYSTEM_ENABLED } from '@/lib/advertisingConfig';
+import { fetchSponsoredProducts, mapSponsoredItem } from '@/lib/advertisingApi';
+import {
+    fetchMarketplaceCategories,
+    formatCategoryLabel,
+    normalizeCategoryValue,
+    resolveProductImageUrl,
+} from '@/lib/marketplaceData';
+import { formatMoqDisplay } from '@/utils/moq';
+import { normalizeLoadedPackSize } from '@/lib/bulkPackaging';
+
+const isAdvertisementSystemEnabled = AD_SYSTEM_ENABLED;
+
+// Pakistan comprehensive location list
+const PAKISTAN_LOCATIONS = [
+    { id: 'sialkot', name: 'Sialkot', region: 'Punjab', type: 'Industrial Hub', popular: true },
+    { id: 'lahore', name: 'Lahore', region: 'Punjab', type: 'Major City', popular: true },
+    { id: 'karachi', name: 'Karachi', region: 'Sindh', type: 'Major City', popular: true },
+
+    // Punjab
+    { id: 'gujranwala', name: 'Gujranwala', region: 'Punjab', type: 'Industrial Hub' },
+    { id: 'faisalabad', name: 'Faisalabad', region: 'Punjab', type: 'Industrial Hub' },
+    { id: 'multan', name: 'Multan', region: 'Punjab', type: 'Major City' },
+    { id: 'gujrat', name: 'Gujrat', region: 'Punjab', type: 'Industrial Hub' },
+    { id: 'wazirabad', name: 'Wazirabad', region: 'Punjab', type: 'Manufacturing Town' },
+    { id: 'sahiwal', name: 'Sahiwal', region: 'Punjab', type: 'City' },
+    { id: 'bahawalpur', name: 'Bahawalpur', region: 'Punjab', type: 'City' },
+    { id: 'rawalpindi', name: 'Rawalpindi', region: 'Punjab', type: 'Major City' },
+    { id: 'sialkot-cantt', name: 'Sialkot Cantt', region: 'Punjab', type: 'Town' },
+    { id: 'daska', name: 'Daska', region: 'Punjab', type: 'Manufacturing Town' },
+    { id: 'sambrial', name: 'Sambrial', region: 'Punjab', type: 'Town' },
+
+    // Sindh
+    { id: 'hyderabad', name: 'Hyderabad', region: 'Sindh', type: 'Major City' },
+    { id: 'sukkur', name: 'Sukkur', region: 'Sindh', type: 'City' },
+    { id: 'larkana', name: 'Larkana', region: 'Sindh', type: 'City' },
+    { id: 'mirpurkhas', name: 'Mirpur Khas', region: 'Sindh', type: 'City' },
+
+    // KPK
+    { id: 'peshawar', name: 'Peshawar', region: 'KPK', type: 'Major City' },
+    { id: 'mardan', name: 'Mardan', region: 'KPK', type: 'City' },
+    { id: 'abbottabad', name: 'Abbottabad', region: 'KPK', type: 'City' },
+    { id: 'swat', name: 'Swat', region: 'KPK', type: 'Region' },
+
+    // Balochistan
+    { id: 'quetta', name: 'Quetta', region: 'Balochistan', type: 'Major City' },
+    { id: 'gwadar', name: 'Gwadar', region: 'Balochistan', type: 'Industrial Hub' },
+
+    // Islamabad
+    { id: 'islamabad', name: 'Islamabad', region: 'Federal', type: 'Capital City' },
+
+    // Gilgit Baltistan / AJK
+    { id: 'gilgit', name: 'Gilgit', region: 'Gilgit Baltistan', type: 'Region' },
+    { id: 'muzaffarabad', name: 'Muzaffarabad', region: 'AJK', type: 'Region' },
+    { id: 'mirpur-ajk', name: 'Mirpur (AJK)', region: 'AJK', type: 'Region' }
+];
+
+// Reusable Searchable Dropdown for Pakistan Regions
+const SearchableLocationDropdown = ({ value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const dropdownRef = React.useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredLocations = useMemo(() => {
+        if (!search) return PAKISTAN_LOCATIONS;
+        return PAKISTAN_LOCATIONS.filter(loc => 
+            loc.name.toLowerCase().includes(search.toLowerCase()) ||
+            loc.region.toLowerCase().includes(search.toLowerCase()) ||
+            (loc.type && loc.type.toLowerCase().includes(search.toLowerCase()))
+        );
+    }, [search]);
+
+    const groupedLocations = useMemo(() => {
+        const groups = {};
+        filteredLocations.forEach(loc => {
+            if (!groups[loc.region]) {
+                groups[loc.region] = [];
+            }
+            groups[loc.region].push(loc);
+        });
+        return groups;
+    }, [filteredLocations]);
+
+    const selectedLocName = useMemo(() => {
+        if (value === 'all') return 'All Pakistan';
+        const found = PAKISTAN_LOCATIONS.find(loc => loc.id === value);
+        return found ? found.name : value;
+    }, [value]);
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="h-[56px] px-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[14px] font-sans font-[700] text-[12px] uppercase tracking-wider text-[#0F172A] outline-none hover:border-[#94A3B8] transition-all flex items-center gap-2 select-none shadow-[0_2px_4px_rgba(15,23,42,0.02)]"
+            >
+                <MapPin size={16} className="text-[#94A3B8] shrink-0" />
+                <span className="truncate max-w-[120px]">Loc: {selectedLocName}</span>
+                <ChevronDown size={14} className={`transition-transform duration-300 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute left-0 mt-2 z-50 bg-white border border-slate-200 rounded-xl shadow-xl w-72 max-h-[340px] overflow-hidden flex flex-col animate-scale-up">
+                    <div className="p-3 border-b border-slate-100">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Search cities, towns..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 text-xs font-body text-slate-900 font-bold placeholder-slate-400"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-2 space-y-3 scrollbar-thin">
+                        {!search && (
+                            <div className="space-y-6.5">
+                                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-2">Popular Hubs</div>
+                                <div className="flex flex-wrap gap-1 px-2">
+                                    {PAKISTAN_LOCATIONS.filter(l => l.popular).map(loc => (
+                                        <button
+                                            key={loc.id}
+                                            type="button"
+                                            onClick={() => {
+                                                onChange(loc.id);
+                                                setIsOpen(false);
+                                                setSearch('');
+                                            }}
+                                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 border border-emerald-100"
+                                        >
+                                            ⭐ {loc.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-6">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onChange('all');
+                                    setIsOpen(false);
+                                    setSearch('');
+                                }}
+                                className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold font-body transition-all flex items-center justify-between ${
+                                    value === 'all' ? 'bg-slate-950 text-white' : 'hover:bg-slate-50 text-slate-700'
+                                }`}
+                            >
+                                <span>🇵🇰 All Pakistan</span>
+                                {value === 'all' && <CheckCircle size={12} className="text-emerald-400" />}
+                            </button>
+
+                            {Object.entries(groupedLocations).map(([region, locs]) => (
+                                <div key={region} className="space-y-6">
+                                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 pt-1 border-t border-slate-50">{region}</div>
+                                    {locs.map(loc => (
+                                        <button
+                                            key={loc.id}
+                                            type="button"
+                                            onClick={() => {
+                                                onChange(loc.id);
+                                                setIsOpen(false);
+                                                setSearch('');
+                                            }}
+                                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold font-body transition-all flex items-center justify-between ${
+                                                value === loc.id ? 'bg-slate-950 text-white' : 'hover:bg-slate-50 text-slate-700'
+                                            }`}
+                                        >
+                                            <span className="flex items-center gap-1.5">
+                                                <span>{loc.name}</span>
+                                                <span className="text-[9px] font-medium text-slate-400">({loc.type})</span>
+                                            </span>
+                                            {value === loc.id && <CheckCircle size={12} className="text-emerald-400" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            ))}
+
+                            {filteredLocations.length === 0 && (
+                                <div className="text-center py-4 text-slate-400 text-xs font-bold">No locations matched</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const MarketplacePage = ({ isDashboard = true }) => {
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
+    const [filters, setFilters] = useState({
+        industry: 'all',
+        moq: 'all',
+        location: 'all',
+        verifiedOnly: false,
+        searchQuery: ''
+    });
+
+    const [sortBy, setSortBy] = useState('newest');
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [chatOpeningId, setChatOpeningId] = useState(null);
+    const [sponsoredProductIds, setSponsoredProductIds] = useState(new Set());
+    const [categoryOptions, setCategoryOptions] = useState([]);
+
+    useEffect(() => {
+        fetchMarketplaceCategories()
+            .then((categories) => setCategoryOptions(categories))
+            .catch(() => setCategoryOptions([]));
+    }, []);
+
+    useEffect(() => {
+        if (!isAdvertisementSystemEnabled) return;
+        const params = {
+            category: filters.industry,
+            keyword: filters.searchQuery || '',
+            limit: 12,
+        };
+        fetchSponsoredProducts(params)
+            .then((res) => {
+                const ids = new Set((res.data || []).map((item) => String(item.productId?._id || item.product?._id || item.productId)));
+                setSponsoredProductIds(ids);
+            })
+            .catch(() => setSponsoredProductIds(new Set()));
+    }, [filters.industry, filters.searchQuery]);
+
+    const fetchProducts = useCallback(async () => {
+        if (authLoading) return;
+        try {
+            setLoading(true);
+            const headers = {};
+            let token = null;
+            if (typeof window !== 'undefined') {
+                token = localStorage.getItem('token');
+                if (token) {
+                    headers.Authorization = `Bearer ${token}`;
+                }
+            }
+            if (user?.role === 'manufacturer' && !token) {
+                setProducts([]);
+                setError('Sign in again to browse the marketplace.');
+                return;
+            }
+            const response = await fetch(`${getApiBaseUrl()}/api/products`, { headers });
+            const data = await response.json();
+            if (data.success) {
+                setError(null);
+                const mappedProducts = data.data.map(p => {
+                    const sellerId = p.seller?._id ?? p.seller;
+                    return {
+                        id: p._id,
+                        name: p.name,
+                        image: resolveProductImageUrl(p.images?.[0] || p.image),
+                        supplier: p.seller?.name || 'Unknown Seller',
+                        sellerId,
+                        location: p.seller?.businessDetails?.city || 'Pakistan',
+                        moq: p.minimumOrderQuantity || 1,
+                        price: p.pricePerBulkUnit || 0,
+                        bulkUnit: p.bulkUnit || 'Dozen',
+                        packSize: normalizeLoadedPackSize(p.bulkUnit || 'Dozen', p.packSize) || 12,
+                        stock: p.stock || 0,
+                        industry: (p.category || 'sports').toLowerCase(),
+                        verified: p.seller?.businessDetails?.isVerified || p.seller?.verificationStatus === 'approved' || p.seller?.verificationStatus === 'verified' || false
+                    };
+                });
+                setProducts(mappedProducts);
+            }
+        } catch (err) {
+            setError('Failed to connect to marketplace. Retrying...');
+        } finally {
+            setLoading(false);
+        }
+    }, [user?.id, user?.role, authLoading]);
+
+    useEffect(() => {
+        const handleAdCategory = (e) => {
+            if (e.detail) {
+                handleFilterChange('industry', e.detail);
+            }
+        };
+        window.addEventListener('ad-category-filter', handleAdCategory);
+        return () => window.removeEventListener('ad-category-filter', handleAdCategory);
+    }, []);
+
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
+
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    const handleAddToCart = (product) => {
+        router.push(`/wholesaler/cart?add=${product.id}&qty=${product.moq}`);
+    };
+
+    const handleChatWithSeller = async (product) => {
+        if (!user?.role || (user.role !== 'manufacturer' && user.role !== 'wholesaler')) return;
+        try {
+            setChatOpeningId(product.id);
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${getApiBaseUrl()}/api/chats/open`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ productId: product.id })
+            });
+            const data = await res.json();
+            if (data.success && data.data?._id) {
+                const chatRoute = user.role === 'manufacturer' ? '/manufacturer/chats' : '/wholesaler/chats';
+                router.push(`${chatRoute}/${data.data._id}`);
+            } else {
+                alert(data.error || 'Could not open chat');
+            }
+        } catch (e) {
+            alert('Could not open chat');
+        } finally {
+            setChatOpeningId(null);
+        }
+    };
+
+    const filteredProducts = useMemo(() => {
+        return products.filter(product => {
+            if (filters.industry !== 'all' && product.industry !== filters.industry) return false;
+            if (filters.location !== 'all' && !product.location.toLowerCase().includes(filters.location.toLowerCase())) return false;
+            if (filters.verifiedOnly && !product.verified) return false;
+            if (filters.moq !== 'all') {
+                const moqValue = parseInt(filters.moq);
+                if (product.moq > moqValue) return false;
+            }
+            if (filters.searchQuery &&
+                !product.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
+                !product.supplier.toLowerCase().includes(filters.searchQuery.toLowerCase())) return false;
+            return true;
+        });
+    }, [products, filters]);
+
+    const sortedProducts = useMemo(() => {
+        let items = [...filteredProducts];
+        if (isAdvertisementSystemEnabled && sponsoredProductIds.size) {
+            items = items.filter((p) => !sponsoredProductIds.has(String(p.id)));
+        }
+        if (sortBy === 'price_low') {
+            items.sort((a, b) => a.price - b.price);
+        } else if (sortBy === 'price_high') {
+            items.sort((a, b) => b.price - a.price);
+        } else if (sortBy === 'verified') {
+            items.sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
+        } else {
+            items.sort((a, b) => b.id.localeCompare(a.id));
+        }
+        return items;
+    }, [filteredProducts, sortBy, sponsoredProductIds]);
+
+    const totalProducts = products.length;
+    const verifiedSuppliersCount = new Set(products.filter(p => p.verified).map(p => p.supplier)).size;
+    const activeCategoriesCount = new Set(products.map(p => p.industry)).size;
+
+    if (loading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-[#E2E8F0] border-b-[#00A878] rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="font-body font-bold text-[#64748B] uppercase tracking-widest text-xs">Loading Marketplace...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 pb-16">
+            {/* Premium Enterprise Hero Section */}
+            <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-8 shadow-[0_8px_24px_rgba(15,23,42,0.05)] flex flex-col items-center text-center justify-center gap-6 mb-8 relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[150%] bg-[#00A878]/10 rounded-[100%] blur-[100px] pointer-events-none -z-10"></div>
+                
+                <div className="flex flex-col items-center gap-2 max-w-3xl mx-auto">
+                    <h1 className="text-[40px] font-[800] text-[#0F172A] leading-tight tracking-tight">
+                        Wholesale Marketplace
+                    </h1>
+                    <p className="text-[16px] text-[#64748B] max-w-2xl">
+                        Source premium sports equipment directly from verified manufacturing partners. Discover, negotiate, and order in bulk with absolute confidence.
+                    </p>
+                    
+                    {/* Inline Premium Stats */}
+                    <div className="flex items-center justify-center gap-3 md:gap-4 font-sans text-[13px] text-[#64748B] font-[500] pt-4 flex-wrap w-full">
+                        <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2.5 rounded-[12px] border border-[#E5E7EB] shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:border-[#CBD5E1] transition-colors">
+                            <Package size={16} className="text-[#00A878]" />
+                            <span className="font-[700] text-[#0F172A]">{totalProducts || '-'}</span>
+                            <span>Products</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2.5 rounded-[12px] border border-[#E5E7EB] shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:border-[#CBD5E1] transition-colors">
+                            <Shield size={16} className="text-[#00A878]" />
+                            <span className="font-[700] text-[#0F172A]">{verifiedSuppliersCount || '-'}</span>
+                            <span>Verified Partners</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 bg-[#E8FFF5] px-4 py-2.5 rounded-[12px] border border-[#00A878]/20 text-[#00A878] shadow-[0_2px_8px_rgba(0,168,120,0.05)]">
+                            <div className="w-2 h-2 rounded-full bg-[#00A878] animate-pulse"></div>
+                            <span className="font-[700] tracking-wide">Live Market</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom: Premium Enterprise Badge */}
+                <div className="shrink-0 flex justify-center mt-2">
+                    <div className="inline-flex items-center gap-3 px-5 py-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] shadow-[0_8px_16px_rgba(15,23,42,0.04)] cursor-default">
+                        <div className="p-2.5 bg-[#F8FAFC] rounded-[12px] text-[#00A878]">
+                            <Sparkles size={20} />
+                        </div>
+                        <div className="flex flex-col items-start pr-2 text-left">
+                            <span className="font-sans text-[13px] font-[800] text-[#0F172A] uppercase tracking-widest leading-none mb-1.5">Enterprise Ready</span>
+                            <span className="font-sans text-[12px] text-[#64748B] font-[500] leading-none">B2B Network</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* SECTION 3: Sponsored Products Highlights */}
+            {isAdvertisementSystemEnabled && (
+                <div className="w-full">
+                    <SponsoredProducts
+                        category={filters.industry}
+                        keyword={filters.searchQuery}
+                        limit={filters.searchQuery ? 4 : 6}
+                        placement={filters.searchQuery ? 'search_results' : filters.industry !== 'all' ? 'category' : 'marketplace'}
+                        onAddToCartClick={handleAddToCart}
+                        onInquiryClick={(prod) => handleChatWithSeller(prod)}
+                    />
+                </div>
+            )}
+
+            {/* Combined Search + Filters Row */}
+            <div className="filter-bar-enterprise flex flex-wrap items-center gap-4">
+                {/* Search Field */}
+                <div className="relative flex-1 min-w-[240px]">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search premium products or suppliers..."
+                        value={filters.searchQuery}
+                        onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+                        className="search-enterprise"
+                    />
+                </div>
+
+                {/* Category Dropdown */}
+                <select
+                    value={filters.industry}
+                    onChange={(e) => handleFilterChange('industry', e.target.value)}
+                    className="h-[56px] px-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[14px] font-sans font-[700] text-[12px] uppercase tracking-wider text-[#0F172A] outline-none hover:border-[#94A3B8] transition-all appearance-none cursor-pointer shadow-[0_2px_4px_rgba(15,23,42,0.02)] focus:border-[#00A878] focus:ring-[4px] focus:ring-[#00A878]/10"
+                >
+                    <option value="all">All Categories</option>
+                    {categoryOptions.map((category) => (
+                        <option key={category} value={normalizeCategoryValue(category)}>
+                            {formatCategoryLabel(category)}
+                        </option>
+                    ))}
+                </select>
+
+                {/* Highly Scalable Searchable Location Dropdown */}
+                <SearchableLocationDropdown
+                    value={filters.location}
+                    onChange={(val) => handleFilterChange('location', val)}
+                />
+
+                {/* Verified Switch Toggle */}
+                <label className="flex items-center gap-3 h-[56px] px-4 border border-[#E5E7EB] rounded-[14px] bg-[#FFFFFF] shadow-[0_2px_4px_rgba(15,23,42,0.02)] hover:border-[#94A3B8] cursor-pointer group transition-all">
+                    <div className={`w-8 h-4.5 rounded-full p-0.5 transition-all duration-300 ${filters.verifiedOnly ? 'bg-[#00A878]' : 'bg-[#E2E8F0]'}`}>
+                        <div className={`w-3.5 h-3.5 bg-[#FFFFFF] rounded-full transition-transform duration-300 shadow-sm ${filters.verifiedOnly ? 'translate-x-3.5' : 'translate-x-0'}`}></div>
+                    </div>
+                    <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={filters.verifiedOnly}
+                        onChange={(e) => handleFilterChange('verifiedOnly', e.target.checked)}
+                    />
+                    <span className="font-sans font-[700] text-[11px] uppercase tracking-widest text-[#64748B] flex items-center gap-1.5 select-none transition-colors group-hover:text-[#0F172A]">
+                        <Shield className={filters.verifiedOnly ? 'text-[#00A878]' : 'text-[#94A3B8]'} size={16} /> Verified Only
+                    </span>
+                </label>
+
+                {/* Sort Dropdown */}
+                <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="h-[56px] px-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[14px] font-sans font-[700] text-[12px] uppercase tracking-wider text-[#0F172A] outline-none hover:border-[#94A3B8] transition-all appearance-none cursor-pointer shadow-[0_2px_4px_rgba(15,23,42,0.02)] focus:border-[#00A878] focus:ring-[4px] focus:ring-[#00A878]/10 ml-auto lg:ml-0"
+                >
+                    <option value="newest">Sort: Newest</option>
+                    <option value="price_low">Price: Low to High</option>
+                    <option value="price_high">Price: High to Low</option>
+                    <option value="verified">Sort: Verified First</option>
+                </select>
+
+                {/* Reset button */}
+                {(filters.industry !== 'all' || filters.location !== 'all' || filters.verifiedOnly || filters.searchQuery || sortBy !== 'newest') && (
+                    <button
+                        onClick={() => {
+                            setFilters({ industry: 'all', moq: 'all', location: 'all', verifiedOnly: false, searchQuery: '' });
+                            setSortBy('newest');
+                        }}
+                        className="flex items-center gap-1.5 h-[56px] px-4 bg-[#FEF2F2] text-[#EF4444] rounded-[14px] font-sans font-[700] text-[11px] uppercase tracking-widest hover:bg-[#EF4444] hover:text-[#FFFFFF] transition-all ml-auto md:ml-0 shadow-sm hover:shadow-md"
+                    >
+                        <FilterX size={16} /> Reset
+                    </button>
+                )}
+            </div>
+
+            {/* Quick Category Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                {[{ id: 'all', label: 'All Categories' }, ...categoryOptions.map((category) => ({
+                    id: normalizeCategoryValue(category),
+                    label: formatCategoryLabel(category),
+                }))].map((cat) => {
+                    const isActive = filters.industry === cat.id;
+                    return (
+                        <button
+                            key={cat.id}
+                            onClick={() => handleFilterChange('industry', cat.id)}
+                            className={`px-5 py-2 rounded-full text-[12px] font-[700] font-sans transition-all whitespace-nowrap uppercase tracking-widest ${
+                                isActive
+                                    ? 'bg-[#00A878] text-white shadow-[0_8px_18px_rgba(0,168,120,0.25)]'
+                                    : 'bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB] hover:bg-[#E5E7EB] hover:text-[#0F172A]'
+                            }`}
+                        >
+                            {cat.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Main Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {sortedProducts.map((product) => (
+                    <div key={product.id} className="product-card-enterprise h-full group">
+                        {/* Fixed Visual Asset System */}
+                        <div className="product-image-wrapper border-b border-[#E5E7EB] p-4">
+                            {product.image ? (
+                                <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="w-full h-full object-contain mix-blend-multiply"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#94A3B8]">
+                                    <Package size={48} className="stroke-[1.5]" />
+                                </div>
+                            )}
+
+                            {/* Trust Badges */}
+                            <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+                                {product.verified ? (
+                                    <div className="px-2.5 py-1 bg-[#00A878] text-[#FFFFFF] rounded-full text-[10px] font-[700] uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                                        <CheckCircle size={12} /> Verified
+                                    </div>
+                                ) : (
+                                    <div className="px-2.5 py-1 bg-[#64748B] text-[#FFFFFF] rounded-full text-[10px] font-[700] uppercase tracking-widest shadow-sm">
+                                        Supplier
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="absolute top-3 right-3 z-10">
+                                <div className="px-2.5 py-1 bg-[#FFFFFF]/95 backdrop-blur-sm text-[#0F172A] border border-[#E5E7EB] rounded-full text-[10px] font-[700] uppercase tracking-widest shadow-sm">
+                                    {product.industry}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Data Points */}
+                        <div className="p-5 flex-1 flex flex-col justify-between">
+                            <div>
+                                <h3 className="font-sans text-[16px] font-[700] text-[#0F172A] group-hover:text-[#00A878] transition-colors line-clamp-2 min-h-[48px] mb-3 leading-snug" title={product.name}>
+                                    {product.name}
+                                </h3>
+                                <div className="flex flex-col gap-2 text-[#64748B] font-sans font-[500] text-[12px]">
+                                    <span className="flex items-center gap-2 truncate text-[#0F172A]">
+                                        <Package size={14} className="text-[#94A3B8] shrink-0" /> {product.supplier}
+                                    </span>
+                                    <span className="flex items-center gap-2 whitespace-nowrap">
+                                        <MapPin size={14} className="text-[#94A3B8] shrink-0" /> {product.location}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Price / MOQ splitting divider grid */}
+                            <div className="grid grid-cols-2 gap-4 py-4 border-y border-[#F1F5F9] my-5 shrink-0">
+                                <div>
+                                    <div className="font-sans text-[10px] font-[700] text-[#94A3B8] uppercase tracking-widest mb-1">Price Per {product.bulkUnit}</div>
+                                    <div className="font-sans font-[800] text-[#00A878] text-[18px]">PKR {product.price.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <div className="font-sans text-[10px] font-[700] text-[#94A3B8] uppercase tracking-widest mb-1">Min Order</div>
+                                    {(() => {
+                                        const moqLabel = formatMoqDisplay(product.moq, product.bulkUnit, product.packSize);
+                                        return (
+                                            <>
+                                                <div className="font-sans font-[800] text-[#0F172A] text-[15px] mt-0.5">{moqLabel.primary}</div>
+                                                {moqLabel.secondary && (
+                                                    <div className="font-sans text-[11px] font-[600] text-[#64748B] mt-0.5">{moqLabel.secondary}</div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
+                            {/* Interactive triggers */}
+                            <div className="space-y-3 shrink-0">
+                                <div className="flex gap-2">
+                                    {(!user || product?.sellerId !== (user?.id || user?._id)) ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAddToCart(product)}
+                                            className="flex-1 flex items-center justify-center gap-2 h-[44px] bg-[#00A878] hover:bg-[#0DBB85] text-[#FFFFFF] rounded-[12px] font-sans font-[700] text-[12px] uppercase tracking-widest transition-all shadow-[0_8px_20px_rgba(0,168,120,0.25)] hover:-translate-y-0.5"
+                                        >
+                                            <ShoppingCart size={16} /> Add to cart
+                                        </button>
+                                    ) : (
+                                        <div className="flex-1 flex items-center justify-center h-[44px] bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0] rounded-[12px] font-sans font-[700] text-[12px] uppercase tracking-widest select-none">
+                                            Your Product
+                                        </div>
+                                    )}
+                                    {user && product?.sellerId !== user?.id && (
+                                        <button
+                                            type="button"
+                                            disabled={chatOpeningId === product.id}
+                                            onClick={() => handleChatWithSeller(product)}
+                                            title="Chat with seller"
+                                            className="h-[44px] w-[44px] flex items-center justify-center border border-[#E5E7EB] text-[#0F172A] rounded-[12px] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] transition-all disabled:opacity-50 shrink-0 shadow-sm bg-[#FFFFFF]"
+                                        >
+                                            <MessageCircle size={18} />
+                                        </button>
+                                    )}
+                                </div>
+                                <Link
+                                    href={`/wholesaler/marketplace/product/${product.id}`}
+                                    className="flex items-center justify-center h-[40px] w-full border border-[#E5E7EB] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] rounded-[12px] font-sans font-[700] text-[11px] uppercase tracking-widest text-[#64748B] hover:text-[#0F172A] transition-all"
+                                >
+                                    View Details
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {sortedProducts.length === 0 && (
+                    <div className="col-span-full empty-state-enterprise">
+                        <div className="icon-circle">
+                            <FilterX size={32} />
+                        </div>
+                        <h3>
+                            {products.length === 0 ? 'No products available' : 'No matches found'}
+                        </h3>
+                        <p>
+                            {products.length === 0
+                                ? 'There are no products available at the moment. Please check back later.'
+                                : 'Adjust your search queries or category filters to find the equipment needed.'}
+                        </p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default MarketplacePage;
