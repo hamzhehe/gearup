@@ -3,8 +3,6 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { InactivityLogoutWrapper } from "@/components/InactivityLogoutWrapper";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ReactGrab } from "react-grab/react";
-import "react-grab/styles.css";
 
 const inter = Inter({
   variable: "--font-app",
@@ -35,7 +33,6 @@ export default function RootLayout({ children }) {
             <AuthProvider>
               <InactivityLogoutWrapper>
                 {children}
-                <ReactGrab />
               </InactivityLogoutWrapper>
             </AuthProvider>
           </ErrorBoundary>
