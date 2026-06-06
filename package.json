@@ -1,8 +1,14 @@
 {
   "name": "gearup",
   "private": true,
-  "description": "Monorepo: Vercel builds frontend-next only. Railway uses Dockerfile for backend.",
+  "description": "Monorepo: Vercel builds frontend-next. Railway uses Dockerfile for backend.",
+  "dependencies": {
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
   "scripts": {
-    "vercel-build": "npm install --prefix frontend-next && npm run build --prefix frontend-next"
+    "build": "cd frontend-next && npm install && npm run build",
+    "vercel-build": "cd frontend-next && npm install && npm run build"
   }
 }
