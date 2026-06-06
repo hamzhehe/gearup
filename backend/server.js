@@ -80,15 +80,15 @@ const startServer = async () => {
         });
         
         const PORT = process.env.PORT || 5001;
-        
+
         app.listen(PORT, () => {
             console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
         });
-        
-        // Added legacy support for port 5000 as some frontend pages are hardcoded to it
-        if (parseInt(PORT) !== 5000) {
+
+        // Legacy second port only for local dev (Railway/cloud assign a single PORT)
+        if (process.env.NODE_ENV !== 'production' && parseInt(PORT, 10) !== 5000) {
             app.listen(5000, () => {
-                console.log(`Server also running on port 5000 for legacy frontend support`);
+                console.log('Server also running on port 5000 for legacy frontend support');
             });
         }
     } catch (err) {
