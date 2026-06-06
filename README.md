@@ -28,7 +28,7 @@ npm run dev
 ## Deploy to Vercel (frontend)
 
 1. Import repo: https://github.com/hamzhehe/gearup
-2. **Settings → General → Root Directory → `frontend-next`**
+2. Leave **Root Directory** empty — root `vercel.json` builds `frontend-next/` automatically
 3. **Settings → Environment Variables** add:
    - `NEXT_PUBLIC_API_URL` = your Railway backend URL (e.g. `https://gearup-production.up.railway.app`)
 4. Redeploy
