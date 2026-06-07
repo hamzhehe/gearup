@@ -37,7 +37,8 @@ GearUp/
 ├── Dockerfile                # Railway: copies backend/ into container
 ├── railway.toml              # Railway: Docker builder + /api/health
 ├── .gitignore
-└── README.md
+├── README.md
+└── PROJECT_STRUCTURE.md
 ```
 
 ## Removed / deprecated
