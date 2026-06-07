@@ -7,7 +7,7 @@ This repo has **two apps**: a Node/Express API and a Next.js frontend. They stay
 ```
 GearUp/
 ├── backend/          # Express API, MongoDB, file uploads
-├── frontend-next/    # Next.js website (App Router)
+├── frontend/    # Next.js website (App Router)
 ├── PROJECT_STRUCTURE.md
 └── CLEANUP_AUDIT.md  # Cleanup history / notes
 ```
@@ -30,7 +30,7 @@ GearUp/
 
 **Run:** `cd backend && npm run dev` (port **5001** by default)
 
-## Frontend (`frontend-next/`)
+## Frontend (`frontend/`)
 
 | Folder | Purpose |
 |--------|---------|
@@ -44,7 +44,7 @@ GearUp/
 | `src/context/` | React context (`AuthContext`) |
 | `src/hooks/` | Custom hooks |
 
-**Run:** `cd frontend-next && npm run dev` (port **3000**)
+**Run:** `cd frontend && npm run dev` (port **3000**)
 
 Set `NEXT_PUBLIC_API_URL` if the API is not at `http://localhost:5001`.
 
@@ -64,11 +64,11 @@ Browser (Next.js)  --fetch-->  Express (backend)  --mongoose-->  MongoDB
                               uploads/ on disk
 ```
 
-There is **no** `frontend-next/src/app/api` — all API logic lives in `backend/`.
+There is **no** `frontend/src/app/api` — all API logic lives in `backend/`.
 
 ## Regenerable folders (safe to delete locally)
 
-- `frontend-next/.next/`
-- `frontend-next/node_modules/` (reinstall with `npm install`)
+- `frontend/.next/`
+- `frontend/node_modules/` (reinstall with `npm install`)
 - `backend/node_modules/`
 - Root `node_modules/` if it appears (no root `package.json` — do not use)

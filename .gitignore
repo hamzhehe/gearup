@@ -12,8 +12,8 @@ backend/config/*.json
 !backend/config/.gitkeep
 
 # Next.js build output
-frontend-next/.next/
-frontend-next/out/
+frontend/.next/
+frontend/out/
 
 # Backend uploads
 backend/uploads/*

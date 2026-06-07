@@ -3,8 +3,8 @@ node_modules
 .env
 **/.env
 .git
-frontend-next/.next
-frontend-next/node_modules
+frontend/.next
+frontend/node_modules
 backend/uploads/*
 !backend/uploads/.gitkeep
 *.md

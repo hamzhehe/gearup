@@ -6,7 +6,7 @@ Pakistan's B2B sports marketplace — Next.js frontend + Express/MongoDB backend
 
 | Folder | Purpose |
 |--------|---------|
-| `frontend-next/` | Next.js app (deploy to **Vercel**) |
+| `frontend/` | Next.js app (deploy to **Vercel**) |
 | `backend/` | Express API (deploy to **Railway**) |
 
 ## Local setup
@@ -19,7 +19,7 @@ npm install
 npm run dev
 
 # Frontend (separate terminal)
-cd frontend-next
+cd frontend
 cp .env.local.example .env.local
 npm install
 npm run dev
@@ -29,7 +29,7 @@ npm run dev
 
 1. Import repo: https://github.com/hamzhehe/gearup
 2. **Settings → Build & Deployment:**
-   - **Root Directory:** `frontend-next`
+   - **Root Directory:** `frontend`
    - **Framework Preset:** Next.js (auto-detected)
    - **Output Directory:** leave **empty**
    - **Build / Install commands:** leave **empty** (uses `package.json` scripts)

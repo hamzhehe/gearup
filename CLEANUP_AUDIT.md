@@ -20,7 +20,7 @@
 | Item | Reason |
 |------|--------|
 | Root `node_modules/` | Orphan (no root package.json) |
-| `frontend-next/.next/` | Regenerable cache |
+| `frontend/.next/` | Regenerable cache |
 | `update.py`, `build_log.txt` | One-off / log files |
 | `backend/scratch/`, dev `*.js` at backend root | Not used by server |
 | 12 unused frontend components | Never imported |
@@ -29,7 +29,7 @@
 
 - `backend/uploads/` — runtime user files
 - `backend/.env`, Dialogflow credentials
-- `backend/node_modules/`, `frontend-next/node_modules/`
+- `backend/node_modules/`, `frontend/node_modules/`
 - All controllers, routes, models, pages
 
 ---
@@ -42,7 +42,7 @@ cd backend
 npm run dev
 
 # Terminal 2 — Website
-cd frontend-next
+cd frontend
 npm run dev
 ```
 
