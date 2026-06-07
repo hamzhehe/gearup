@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
         const initAuth = async () => {
             const storedUser = localStorage.getItem('gearup_user');
             const token = localStorage.getItem('token');
-            
+
             if (storedUser) {
                 try {
                     setUser(JSON.parse(storedUser));
@@ -32,9 +32,11 @@ export const AuthProvider = ({ children }) => {
                 }
             }
 
+            // Show UI immediately with cached session; refresh profile in background.
+            setLoading(false);
+
             if (token) {
                 try {
-                    console.log("Restoring user session, fetching latest profile...");
                     const res = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
@@ -42,16 +44,13 @@ export const AuthProvider = ({ children }) => {
                     });
                     const data = await res.json();
                     if (data.success && data.data) {
-                        const latestUser = data.data;
-                        console.log("Fetched user profile:", latestUser);
-                        setUser(latestUser);
-                        localStorage.setItem('gearup_user', JSON.stringify(latestUser));
+                        setUser(data.data);
+                        localStorage.setItem('gearup_user', JSON.stringify(data.data));
                     }
                 } catch (error) {
-                    console.error("Session restoration error:", error);
+                    console.error('Session restoration error:', error);
                 }
             }
-            setLoading(false);
         };
 
         initAuth();

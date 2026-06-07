@@ -17,6 +17,17 @@ const walletRoutes = require('./routes/walletRoutes');
 
 // Load env vars
 dotenv.config();
+
+// Configure custom DNS servers for local development to avoid querySrv ECONNREFUSED issues with Node.js DNS resolver
+if (process.env.NODE_ENV !== 'production') {
+    const dns = require('dns');
+    try {
+        dns.setServers(['8.8.8.8', '1.1.1.1']);
+    } catch (err) {
+        console.warn('[dns] Could not set custom DNS servers:', err.message);
+    }
+}
+
 const { prepareGoogleCredentials } = require('./utils/prepareGoogleCredentials');
 prepareGoogleCredentials();
 
@@ -39,10 +50,6 @@ const startServer = async () => {
         
         // Body parser — allow product payloads with metadata (images upload separately)
         app.use(express.json({ limit: '2mb' }));
-        app.use((req, res, next) => {
-            console.log(`>>> ${req.method} ${req.url}`);
-            next();
-        });
         
         // Enable CORS
         app.use(cors());

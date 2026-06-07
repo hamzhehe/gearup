@@ -80,11 +80,14 @@ function AdminDashboardContent() {
                   <div className="absolute inset-0 bg-gradient-to-r from-[#031A1F] via-[#031A1F]/80 to-transparent z-[5]"></div>
                   <div className="absolute inset-0 bg-gradient-to-t from-[#031A1F]/40 via-transparent to-transparent z-[5]"></div>
                 </div>
-                {/* Banner image - above gradients, below content */}
                 <img 
                   src="/dashboard/fakhar-zaman-banner.png" 
                   alt="Fakhar Zaman" 
                   className="absolute bottom-0 right-4 h-[95%] w-auto object-contain hidden lg:block transition-all duration-500 scale-100 group-hover:scale-105 z-[8] pointer-events-none" 
+                  style={{
+                    maskImage: 'linear-gradient(to right, transparent 45%, black 85%)',
+                    WebkitMaskImage: 'linear-gradient(to right, transparent 45%, black 85%)'
+                  }}
                 />
 
                 <div className="relative z-[10] flex flex-col w-full lg:w-[65%] animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">

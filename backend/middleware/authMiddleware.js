@@ -48,25 +48,16 @@ exports.protect = async (req, res, next) => {
 
     // Make sure token exists
     if (!token) {
-        console.log("Token Missing in Auth Middleware Headers!");
         return res.status(401).json({ success: false, error: 'Not authorized to access this route (token missing)' });
     }
 
     try {
-        // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("Token Decoded Successfully:", decoded);
-
         req.user = await User.findById(decoded.id);
 
         if (!req.user) {
-            console.log(`User not found in database for ID: ${decoded.id}`);
             return res.status(401).json({ success: false, error: `Not authorized to access this route (user not found with ID ${decoded.id})` });
         }
-
-        console.log("User Role:", req.user.role);
-        console.log("Auth User:", req.user);
-        console.log("Token:", token);
 
         if (req.user.isBlocked) {
             return res.status(403).json({ success: false, error: 'Your account has been blocked.' });
@@ -74,7 +65,6 @@ exports.protect = async (req, res, next) => {
 
         next();
     } catch (err) {
-        console.log("Token Verification Error:", err.message);
         return res.status(401).json({ success: false, error: `Not authorized to access this route (token verification failed: ${err.message})` });
     }
 };
@@ -83,7 +73,6 @@ exports.protect = async (req, res, next) => {
 exports.authorize = (...roles) => {
     return (req, res, next) => {
         if (!roles.includes(req.user.role)) {
-            console.log(`Authorization failed. Required roles: ${JSON.stringify(roles)}. User role: ${req.user?.role}`);
             return res.status(403).json({
                 success: false,
                 error: `User role ${req.user?.role || 'undefined'} is not authorized to access this route (requires: ${roles.join(', ')})`
