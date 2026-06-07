@@ -101,7 +101,27 @@ npm run dev
 ```bash
 cd frontend && npm install && npm run build   # must succeed
 cd backend && npm install && npm start        # must listen on PORT
+curl http://localhost:5001/api/health        # {"status":"ok",...}
 ```
+
+## Production readiness checklist
+
+| Check | Status |
+|-------|--------|
+| Monorepo: `frontend/` + `backend/` only | Ready |
+| `frontend-next/` removed | Done |
+| Frontend `npm run build` | Must pass locally before push |
+| Backend `GET /api/health` → `status: ok` | Ready |
+| Railway `PORT` env (auto-injected) | Ready |
+| Vercel Root Directory = `frontend` | **Set in dashboard** |
+| `NEXT_PUBLIC_API_URL` on Vercel | **Required** |
+
+### Variable name reference
+
+| Your spec | Actual in codebase |
+|-----------|-------------------|
+| `MONGODB_URI` | Use **`MONGO_URI`** |
+| `FRONTEND_URL` | Optional (not required; CORS is open) |
 
 ## Backup recommendation
 

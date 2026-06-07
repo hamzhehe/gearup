@@ -76,9 +76,13 @@ const startServer = async () => {
         const { scheduleAdCampaignExpiryJob } = require('./jobs/adCampaignExpiryJob');
         scheduleAdCampaignExpiryJob();
         
-        // Health check route
+        // Health check route (Railway + uptime monitors)
         app.get('/api/health', (req, res) => {
-            res.status(200).json({ success: true, message: 'API is running' });
+            res.status(200).json({
+                status: 'ok',
+                success: true,
+                message: 'API is running',
+            });
         });
         
         const PORT = process.env.PORT || 5001;
