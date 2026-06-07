@@ -85,9 +85,10 @@ npm run dev
 | Build Command | **empty** |
 | Install Command | **empty** |
 
-> Do **not** set Root Directory to `frontend` while root `vercel.json` exists.
+> Root `package.json` exists only so Vercel detects `next` at repo root. The app still builds from `frontend/`.
+> Do **not** set Root Directory to `frontend` — that conflicts with root `vercel.json`.
 > If build finishes in under 5 seconds, Vercel is not running `next build`.
-> A real build takes ~30–60 seconds and logs `Generating static pages (98/98)`.
+> A real build takes ~30–60 seconds and logs `Generating static pages (97/97)`.
 
 3. **Environment Variables:** `NEXT_PUBLIC_API_URL` = your Railway URL
 4. Redeploy the **latest** commit (not an old failed deployment)
