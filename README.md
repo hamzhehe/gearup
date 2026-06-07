@@ -79,14 +79,14 @@ npm run dev
 
 | Setting | Value |
 |---------|--------|
-| Root Directory | **empty** (repo root — `vercel.json` builds `frontend/`) |
-| Framework Preset | **Other** |
+| Root Directory | **`frontend`** (must match `frontend/package.json`) |
+| Framework Preset | **Next.js** |
 | Output Directory | **empty** — delete `public` if set |
 | Build Command | **empty** |
 | Install Command | **empty** |
 
-> Do **not** set Root Directory to `frontend` while root `vercel.json` exists — that causes "No Next.js version detected".
-> If build finishes in under 5 seconds, Vercel is not running `next build`.
+> There is **no** root `vercel.json`. Vercel must use Root Directory `frontend` only.
+> If build finishes in under 5 seconds, Root Directory is wrong (building repo root).
 > A real build takes ~30–60 seconds and logs `Generating static pages (98/98)`.
 
 3. **Environment Variables:** `NEXT_PUBLIC_API_URL` = your Railway URL
@@ -117,7 +117,7 @@ curl http://localhost:5001/api/health        # {"status":"ok",...}
 | Frontend `npm run build` | Must pass locally before push |
 | Backend `GET /api/health` → `status: ok` | Ready |
 | Railway `PORT` env (auto-injected) | Ready |
-| Vercel Root Directory = empty (uses root `vercel.json`) | **Required in dashboard** |
+| Vercel Root Directory = `frontend` | **Required in dashboard** |
 | `NEXT_PUBLIC_API_URL` on Vercel | **Required** |
 
 ### Variable name reference
