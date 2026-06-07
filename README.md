@@ -75,15 +75,18 @@ npm run dev
 ## Deploy to Vercel (frontend only)
 
 1. Import repo: https://github.com/hamzhehe/gearup
-2. **Settings → Build & Deployment:**
+2. **Settings → Build & Deployment** (fixes 404 / 328ms fake builds):
 
 | Setting | Value |
 |---------|--------|
-| Root Directory | `frontend` |
-| Framework Preset | Next.js |
-| Output Directory | *(empty)* |
-| Build Command | *(empty)* |
-| Install Command | *(empty)* |
+| Root Directory | **empty** (repo root — `vercel.json` builds `frontend/`) |
+| Framework Preset | Other |
+| Output Directory | **empty** — delete `public` if set |
+| Build Command | **empty** |
+| Install Command | **empty** |
+
+> If build finishes in under 5 seconds, Vercel is not running `next build`. Check settings above.
+> A real build takes ~30–60 seconds and logs `next build`.
 
 3. **Environment Variables:** `NEXT_PUBLIC_API_URL` = your Railway URL
 4. Redeploy
