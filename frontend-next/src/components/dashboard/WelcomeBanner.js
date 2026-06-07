@@ -96,9 +96,7 @@ const WelcomeBanner = ({
   const roleBadge =
     user?.role === 'admin'
       ? 'Platform Admin'
-      : user?.role === 'wholesaler'
-        ? 'Verified Buyer'
-        : 'Verified Seller';
+      : 'Verified Business';
 
   const menu = dropdownOpen && mounted
     ? createPortal(
@@ -151,17 +149,43 @@ const WelcomeBanner = ({
     >
       {/* Background artwork layer — clip decorative layers only */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden rounded-[24px]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_25%,rgba(0,168,150,0.25),transparent_42%),radial-gradient(circle_at_8%_85%,rgba(0,168,150,0.08),transparent_38%)] mix-blend-overlay"></div>
+        {/* Subtle radial green ambient lighting */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_92%_30%,rgba(0,168,120,0.18),transparent_50%),radial-gradient(circle_at_6%_80%,rgba(0,168,120,0.06),transparent_40%)] mix-blend-overlay"></div>
 
-        {/* Dark overlay to reduce image dominance */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#031A1F] via-[#031A1F]/80 to-transparent z-[5]"></div>
+        {/* Premium glow behind image area */}
+        <div
+          className="absolute z-[1]"
+          style={{
+            right: '-5%',
+            top: '10%',
+            width: '45%',
+            height: '80%',
+            background: 'radial-gradient(ellipse at center, rgba(0,168,120,0.12) 0%, transparent 70%)',
+            filter: 'blur(30px)',
+          }}
+        ></div>
+
+        {/* Fakhar Zaman Image — pushed further right, reduced opacity */}
+        <div 
+          className="absolute inset-0 z-[2] transition-opacity duration-700"
+          style={{
+            backgroundImage: "url('/dashboard/fakhar-zaman-banner.png')",
+            backgroundPosition: "calc(100% + 40px) center",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "contain",
+            opacity: 0.13
+          }}
+        ></div>
+
+        {/* Strengthened dark overlay — heavier on left for text readability */}
+        <div className="absolute inset-0 z-[5]" style={{ background: 'linear-gradient(to right, #031A1F 0%, rgba(3,26,31,0.92) 35%, rgba(3,26,31,0.55) 60%, rgba(3,26,31,0.15) 100%)' }}></div>
       </div>
 
-      <div className="relative z-[10] flex flex-col w-full lg:w-[65%] animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      <div className="relative z-[10] flex flex-col w-full lg:w-[58%] animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-md border border-white/10 text-[12px] font-semibold text-[#a7f3d0] shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-300 hover:bg-white/10 hover:border-[#00A878]/40 hover:shadow-[0_4px_16px_rgba(0,168,120,0.15)] cursor-default">
-            GearUp Seller Center
+            {user?.role === 'admin' ? 'Platform Admin' : user?.role === 'wholesaler' ? 'GearUp Wholesaler Center' : 'GearUp Manufacturer Center'}
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-md border border-white/10 text-[12px] font-semibold text-white/90 shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:shadow-[0_4px_16px_rgba(255,255,255,0.05)] cursor-default">
             <ShieldCheck size={14} className="text-[#00A878]" />
@@ -170,7 +194,7 @@ const WelcomeBanner = ({
         </div>
 
         {/* Heading */}
-        <h1 className="text-[32px] sm:text-[36px] lg:text-[44px] font-[800] text-white tracking-tight leading-tight mb-3">
+        <h1 className="text-[32px] sm:text-[36px] lg:text-[44px] font-[800] text-white tracking-tight leading-tight mb-3 whitespace-nowrap" style={{ maxWidth: '600px' }}>
           {greeting}, {displayName} 👋
         </h1>
 

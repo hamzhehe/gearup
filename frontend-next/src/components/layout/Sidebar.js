@@ -93,9 +93,11 @@ const Sidebar = ({
   const menuItems = getMenuItems() || [];
   const roleDisplay = user?.role === 'admin'
     ? 'Administrator'
-    : user?.role
-      ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-      : '';
+    : user?.role === 'wholesaler'
+      ? 'Wholesaler'
+      : user?.role === 'manufacturer'
+        ? 'Manufacturer'
+        : '';
 
   const width = isMobile ? widthFull : isOpen ? widthFull : widthCollapsed;
   const showLabels = isOpen || isMobile;
@@ -136,7 +138,7 @@ const Sidebar = ({
               <div className="min-w-0">
                 <div className="font-bold text-white text-[15px] leading-none tracking-tight">GEARUP</div>
                 <div className="text-[9px] text-[#00A878] font-bold uppercase tracking-[0.2em] mt-1">
-                  {user?.role === 'admin' ? 'Admin Center' : 'Seller Center'}
+                  {user?.role === 'admin' ? 'Admin Center' : user?.role === 'wholesaler' ? 'Wholesaler Center' : 'Manufacturer Center'}
                 </div>
               </div>
             )}
@@ -211,13 +213,27 @@ const Sidebar = ({
 
         <div className="p-2.5 border-t border-white/[0.06] space-y-1 shrink-0">
           {showLabels && user && (
-            <div className="px-3.5 py-3 mb-1 rounded-[14px] border border-white/[0.08] bg-white/[0.04]">
+            <div
+              className="px-3.5 py-3 mb-1 rounded-[16px] border border-white/[0.08] backdrop-blur-sm"
+              style={{
+                background: 'linear-gradient(135deg, rgba(8,25,20,0.95), rgba(12,45,35,0.95))',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+              }}
+            >
               <div className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/35 mb-3">Account</div>
               <div className="flex items-center gap-3">
-                <UserAvatar user={user} size="sm" variant="dark" />
+                <div className="shrink-0" style={{ filter: 'drop-shadow(0 0 15px rgba(16,185,129,0.25))' }}>
+                  <UserAvatar
+                    user={user}
+                    size="sm"
+                    variant="dark"
+                    className="border-2"
+                    style={{ borderColor: 'rgba(16,185,129,0.4)' }}
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-bold text-white truncate leading-tight">{user.name || 'User'}</div>
-                  <div className="text-[10px] text-[#00A878]/80 font-semibold mt-0.5">{roleDisplay}</div>
+                  <div className="text-[13px] font-semibold text-white/95 truncate leading-tight">{user.name || 'User'}</div>
+                  <div className="text-[10px] text-[#10B981] font-semibold mt-0.5">{roleDisplay}</div>
                 </div>
               </div>
             </div>

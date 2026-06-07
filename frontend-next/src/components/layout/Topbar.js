@@ -87,8 +87,8 @@ const Topbar = ({
     user?.role === 'admin'
       ? 'Administrator'
       : user?.role === 'wholesaler'
-        ? 'Buyer'
-        : 'Seller';
+        ? 'Wholesaler'
+        : 'Manufacturer';
 
   const profileHref = user?.role === 'wholesaler' ? '/wholesaler/profile' : '/profile';
 
@@ -109,33 +109,14 @@ const Topbar = ({
           </button>
 
           <div className="hidden sm:block min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-[#00A878]">GearUp Seller Center</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#00A878]">
+              {user?.role === 'admin' ? 'GearUp Admin Center' : user?.role === 'wholesaler' ? 'GearUp Wholesaler Center' : 'GearUp Manufacturer Center'}
+            </div>
             <div className="text-sm font-semibold text-[#0F172A] truncate">{breadcrumbs.join(' › ')}</div>
           </div>
         </div>
 
-        <div className="hidden md:flex flex-1 max-w-lg mx-3">
-          <div className="relative w-full">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-            <input
-              type="text"
-              placeholder="Search products, suppliers, orders..."
-              className="search-input"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-5 shrink-0">
-          {onAddProductClick && user?.role === 'manufacturer' && (
-            <button
-              type="button"
-              onClick={onAddProductClick}
-              className="hidden lg:inline-flex items-center gap-1.5 h-9 px-4 rounded-lg btn-primary text-xs shadow-[0_4px_14px_rgba(0,168,120,0.35)]"
-            >
-              <Plus size={16} />
-              Add product
-            </button>
-          )}
+        <div className="flex items-center gap-5 shrink-0 ml-auto">
 
           <NotificationBell />
 

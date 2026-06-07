@@ -430,34 +430,7 @@ export default function WholesalerDashboard() {
                 </div>
             </section>
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <Link
-                    href="/wholesaler/marketplace"
-                    className="seller-kpi border-t-4 border-t-[#00A878] p-5 flex items-center gap-4 min-w-0 group"
-                >
-                    <div className="w-12 h-12 rounded-xl bg-[#E8FFF5] text-[#00A878] border border-[#86EFAC] flex items-center justify-center shrink-0">
-                        <Store size={22} />
-                    </div>
-                    <div className="min-w-0">
-                        <h3 className="font-heading font-semibold text-[#021018] text-sm">Browse marketplace</h3>
-                        <p className="text-xs text-[#64748B] mt-0.5 truncate">Discover new suppliers & catalog</p>
-                    </div>
-                    <ArrowRight size={16} className="text-slate-400 ml-auto shrink-0" />
-                </Link>
-                <Link
-                    href="/manufacturer/transactions"
-                    className="seller-kpi border-t-4 border-t-[#00b96b] p-5 flex items-center gap-4 min-w-0 group"
-                >
-                    <div className="w-12 h-12 rounded-xl bg-[#ecfdf5] text-[#00b96b] border border-[#a7f3d0] flex items-center justify-center shrink-0">
-                        <Banknote size={22} />
-                    </div>
-                    <div className="min-w-0">
-                        <h3 className="font-heading font-semibold text-[#021018] text-sm">Wallet & payments</h3>
-                        <p className="text-xs text-[#64748B] mt-0.5 truncate">Balance, escrow & transactions</p>
-                    </div>
-                    <ArrowRight size={16} className="text-slate-400 ml-auto shrink-0" />
-                </Link>
-            </section>
+
         </div>
     );
 }

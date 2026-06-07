@@ -25,8 +25,11 @@ const STATUS_STYLES = {
 function getImageUrl(product) {
   const raw = product?.images?.[0] || product?.image;
   if (!raw) return null;
-  if (raw.startsWith('http')) return raw;
-  return `${getApiBaseUrl()}${raw}`;
+  const urlString = typeof raw === 'string' ? raw : (raw.url || raw.path || '');
+  if (!urlString) return null;
+  if (urlString.startsWith('http') || urlString.startsWith('data:')) return urlString;
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}${urlString.startsWith('/') ? '' : '/'}${urlString}`;
 }
 
 function getCampaignTypeLabel(type) {
@@ -43,9 +46,14 @@ function MetricPill({ label, value }) {
 }
 
 export default function PremiumCampaignCard({ campaign, actionId, onAction, showManufacturer = true }) {
+  const [imgFailed, setImgFailed] = React.useState(false);
   const product = campaign.productId;
   const manufacturer = campaign.manufacturerId;
   const imageUrl = getImageUrl(product);
+  
+  React.useEffect(() => {
+    setImgFailed(false);
+  }, [imageUrl]);
   const statusMeta = CAMPAIGN_STATUSES[campaign.status] || { label: campaign.status };
   const statusClass = STATUS_STYLES[campaign.status] || STATUS_STYLES.draft;
   const revenue = campaign.amountPaid || campaign.budget || 0;
@@ -60,10 +68,15 @@ export default function PremiumCampaignCard({ campaign, actionId, onAction, show
           {/* LEFT — Product identity */}
           <div className="flex gap-4 flex-1 min-w-0 xl:max-w-[34%]">
             <div className="w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] overflow-hidden shrink-0 flex items-center justify-center">
-              {imageUrl ? (
-                <img src={imageUrl} alt="" className="w-full h-full object-contain p-1.5 mix-blend-multiply" />
+              {imageUrl && !imgFailed ? (
+                <img 
+                  src={imageUrl} 
+                  alt="" 
+                  className="w-full h-full object-contain p-1.5 mix-blend-multiply" 
+                  onError={() => setImgFailed(true)}
+                />
               ) : (
-                <div className="flex flex-col items-center justify-center text-[#00A878]">
+                <div className="flex flex-col items-center justify-center text-[#00A878] w-full h-full bg-[#F8FAFC]">
                   <div className="w-9 h-9 rounded-lg bg-[#0F172A] flex items-center justify-center font-black text-white text-sm">G</div>
                   <span className="text-[8px] font-bold uppercase mt-1 text-[#64748B]">GearUp</span>
                 </div>
