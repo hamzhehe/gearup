@@ -79,12 +79,13 @@ npm run dev
 
 | Setting | Value |
 |---------|--------|
-| Root Directory | **`frontend`** |
-| Framework Preset | **Next.js** (auto-detected) |
+| Root Directory | **empty** (repo root — `vercel.json` builds `frontend/`) |
+| Framework Preset | **Other** |
 | Output Directory | **empty** — delete `public` if set |
-| Build Command | **empty** (default `next build`) |
-| Install Command | **empty** (default `npm install`) |
+| Build Command | **empty** |
+| Install Command | **empty** |
 
+> Do **not** set Root Directory to `frontend` while root `vercel.json` exists — that causes "No Next.js version detected".
 > If build finishes in under 5 seconds, Vercel is not running `next build`.
 > A real build takes ~30–60 seconds and logs `Generating static pages (98/98)`.
 
@@ -116,7 +117,7 @@ curl http://localhost:5001/api/health        # {"status":"ok",...}
 | Frontend `npm run build` | Must pass locally before push |
 | Backend `GET /api/health` → `status: ok` | Ready |
 | Railway `PORT` env (auto-injected) | Ready |
-| Vercel Root Directory = `frontend` | **Required in dashboard** |
+| Vercel Root Directory = empty (uses root `vercel.json`) | **Required in dashboard** |
 | `NEXT_PUBLIC_API_URL` on Vercel | **Required** |
 
 ### Variable name reference
