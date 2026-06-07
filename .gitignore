@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Legacy folder (renamed to frontend/) — do not commit
+frontend-next/
+
 # Environment & secrets (never commit)
 .env
 .env.*
