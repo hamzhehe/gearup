@@ -52,7 +52,7 @@ npm run dev
 
 | Variable | Required | Example |
 |----------|----------|---------|
-| `NEXT_PUBLIC_API_URL` | **Yes** (production) | `https://your-app.up.railway.app` |
+| `NEXT_PUBLIC_BACKEND_URL` | **Yes** (production) | `https://gearup-production-8048.up.railway.app` |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID |
 
 ### Backend (Railway + local `.env`)
@@ -90,7 +90,7 @@ npm run dev
 > If build finishes in under 5 seconds, Vercel is not running `next build`.
 > A real build takes ~30–60 seconds and logs `Generating static pages (98/98)`.
 
-3. **Environment Variables:** `NEXT_PUBLIC_API_URL` = your Railway URL
+3. **Environment Variables:** `NEXT_PUBLIC_BACKEND_URL` = `https://gearup-production-8048.up.railway.app`
 4. Redeploy the **latest** commit (not an old failed deployment)
 
 ## Deploy to Railway (backend only)
@@ -119,7 +119,7 @@ curl http://localhost:5001/api/health        # {"status":"ok",...}
 | Backend `GET /api/health` → `status: ok` | Ready |
 | Railway `PORT` env (auto-injected) | Ready |
 | Vercel Root Directory = empty (uses root `vercel.json`) | **Required in dashboard** |
-| `NEXT_PUBLIC_API_URL` on Vercel | **Required** |
+| `NEXT_PUBLIC_BACKEND_URL` on Vercel | **Required** (HTTPS Railway URL) |
 
 ### Variable name reference
 

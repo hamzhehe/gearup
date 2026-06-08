@@ -69,8 +69,7 @@ const VerifyEmailContent = () => {
 
         try {
             // Force absolute URL to bypass any Next.js proxying issues
-            const baseUrl = getApiBaseUrl() || 'http://localhost:5001';
-            const targetUrl = `${baseUrl}/api/auth/verify-email?t=${Date.now()}`;
+            const targetUrl = `${getApiBaseUrl()}/api/auth/verify-email?t=${Date.now()}`;
 
             const response = await fetch(targetUrl, {
                 method: 'POST',
@@ -125,8 +124,7 @@ const VerifyEmailContent = () => {
         setResending(true);
         setError('');
         try {
-            const baseUrl = getApiBaseUrl() || 'http://localhost:5001';
-            const targetUrl = `${baseUrl}/api/auth/resend-otp?t=${Date.now()}`;
+            const targetUrl = `${getApiBaseUrl()}/api/auth/resend-otp?t=${Date.now()}`;
 
             const response = await fetch(targetUrl, {
                 method: 'POST',

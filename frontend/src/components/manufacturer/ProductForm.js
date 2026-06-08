@@ -514,7 +514,7 @@ const ProductForm = ({ id }) => {
             }
         } catch (err) {
             if (err?.message === 'Failed to fetch') {
-                setError('Could not reach the server. Make sure the backend is running on port 5001 and try again.');
+                setError('Could not reach the server. Make sure the backend is running and try again.');
             } else {
                 setError(err.message || 'Something went wrong. Please try again.');
             }
