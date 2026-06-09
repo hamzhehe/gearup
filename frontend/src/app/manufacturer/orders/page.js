@@ -312,7 +312,7 @@ const ManufacturerOrdersPage = () => {
     return (
         <div className="flex flex-col gap-6 w-full">
             {/* Header */}
-            <div className="page-header-enterprise flex flex-col items-center text-center justify-center gap-4">
+            <div className="page-header-enterprise flex flex-col items-center sm:items-start text-center sm:text-left justify-center gap-4">
                 <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center justify-center gap-3">
                         <Package className="text-[#00A878]" size={32} />

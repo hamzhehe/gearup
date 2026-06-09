@@ -8,7 +8,7 @@ const defaultActions = [
   { label: 'Add product', route: '/manufacturer/products/new', tone: 'teal' },
   { label: 'Orders', route: '/manufacturer/orders', tone: 'teal' },
   { label: 'Marketplace', route: '/wholesaler/marketplace', tone: 'slate' },
-  { label: 'Messages', route: '/manufacturer/chats', tone: 'teal', badgeCount: 5 }
+  { label: 'Messages', route: '/manufacturer/chats', tone: 'teal' }
 ];
 
 const TONE = {

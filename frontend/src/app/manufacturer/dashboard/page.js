@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { isLowStockAlert } from '@/utils/inventory';
 import { formatPKR, getSalesMetrics } from '@/lib/financeUtils';
-import { isOrderInTimeRange } from '@/lib/dashboardUtils';
+import { isOrderInTimeRange, OPEN_DISPUTE_STATUSES } from '@/lib/dashboardUtils';
 import {
     countTopSellingProducts,
     countPublishedProducts,
@@ -18,6 +18,9 @@ import {
     getSellerOrderItems,
     isCompletedSaleOrder,
     isOrderInBounds,
+    getSellerSubtotal,
+    isChartEligibleSellerOrder,
+    isChartEligiblePurchaseOrder,
     isSellerOnOrder,
     resolveUserId,
 } from '@/lib/dashboardAnalytics';
@@ -103,8 +106,7 @@ const ManufacturerDashboard = () => {
                 setProducts([]);
             }
 
-            const openStatuses = ['open', 'awaiting_seller', 'seller_responded', 'under_review', 'investigating'];
-            const countOpen = (list) => (list || []).filter((d) => openStatuses.includes(d.status)).length;
+            const countOpen = (list) => (list || []).filter((d) => OPEN_DISPUTE_STATUSES.includes(d.status)).length;
             const [sellerDisputesRes, myDisputesRes] = await Promise.all([
                 fetch(`${getApiBaseUrl()}/api/disputes/seller`, { headers }),
                 fetch(`${getApiBaseUrl()}/api/disputes/mine`, { headers })
@@ -365,66 +367,73 @@ const ManufacturerDashboard = () => {
 
     // Dynamic, reactive Revenue data generation and bucketing based on timescale selection
     const revenueData = useMemo(() => {
-        const filtered = orders.filter(o => isOrderInTimeRange(o.createdAt, timeRange));
-        
+        const userId = resolveUserId(user);
+        const filtered = orders.filter(
+            (o) => isOrderInTimeRange(o.createdAt, timeRange) && isChartEligibleSellerOrder(o, userId)
+        );
+
+        const addRevenue = (entry, order) => {
+            entry.revenue += getSellerSubtotal(order, userId);
+        };
+
         switch (timeRange) {
             case 'today': {
                 const hours = ['09:00', '12:00', '15:00', '18:00', '21:00'];
                 const data = hours.map(h => ({ period: h, revenue: 0 }));
-                
+
                 filtered.forEach(o => {
                     if (!o.createdAt) return;
                     const hour = new Date(o.createdAt).getHours();
-                    if (hour < 11) data[0].revenue += (o.totalAmount || 0);
-                    else if (hour < 14) data[1].revenue += (o.totalAmount || 0);
-                    else if (hour < 17) data[2].revenue += (o.totalAmount || 0);
-                    else if (hour < 20) data[3].revenue += (o.totalAmount || 0);
-                    else data[4].revenue += (o.totalAmount || 0);
+                    if (hour < 11) addRevenue(data[0], o);
+                    else if (hour < 14) addRevenue(data[1], o);
+                    else if (hour < 17) addRevenue(data[2], o);
+                    else if (hour < 20) addRevenue(data[3], o);
+                    else addRevenue(data[4], o);
                 });
-                
+
                 return data;
             }
             case 'week': {
                 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                 const data = days.map(d => ({ period: d, revenue: 0 }));
-                
+
                 filtered.forEach(o => {
                     if (!o.createdAt) return;
                     let dayIdx = new Date(o.createdAt).getDay() - 1;
                     if (dayIdx < 0) dayIdx = 6;
-                    data[dayIdx].revenue += (o.totalAmount || 0);
+                    addRevenue(data[dayIdx], o);
                 });
-                
+
                 return data;
             }
             case 'month': {
                 const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
                 const data = weeks.map(w => ({ period: w, revenue: 0 }));
-                
+
                 filtered.forEach(o => {
                     if (!o.createdAt) return;
                     const date = new Date(o.createdAt).getDate();
-                    if (date <= 7) data[0].revenue += (o.totalAmount || 0);
-                    else if (date <= 14) data[1].revenue += (o.totalAmount || 0);
-                    else if (date <= 21) data[2].revenue += (o.totalAmount || 0);
-                    else data[3].revenue += (o.totalAmount || 0);
+                    if (date <= 7) addRevenue(data[0], o);
+                    else if (date <= 14) addRevenue(data[1], o);
+                    else if (date <= 21) addRevenue(data[2], o);
+                    else addRevenue(data[3], o);
                 });
-                
+
                 return data;
             }
             case 'year': {
                 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
                 const data = quarters.map(q => ({ period: q, revenue: 0 }));
-                
+
                 filtered.forEach(o => {
                     if (!o.createdAt) return;
                     const m = new Date(o.createdAt).getMonth();
-                    if (m < 3) data[0].revenue += (o.totalAmount || 0);
-                    else if (m < 6) data[1].revenue += (o.totalAmount || 0);
-                    else if (m < 9) data[2].revenue += (o.totalAmount || 0);
-                    else data[3].revenue += (o.totalAmount || 0);
+                    if (m < 3) addRevenue(data[0], o);
+                    else if (m < 6) addRevenue(data[1], o);
+                    else if (m < 9) addRevenue(data[2], o);
+                    else addRevenue(data[3], o);
                 });
-                
+
                 return data;
             }
             case '6months':
@@ -439,20 +448,18 @@ const ManufacturerDashboard = () => {
                         revenue: 0
                     });
                 }
-                
+
                 filtered.forEach(o => {
                     if (!o.createdAt) return;
                     const mName = months[new Date(o.createdAt).getMonth()];
                     const entry = last6.find(m => m.period === mName);
-                    if (entry) {
-                        entry.revenue += (o.totalAmount || 0);
-                    }
+                    if (entry) addRevenue(entry, o);
                 });
-                
+
                 return last6;
             }
         }
-    }, [orders, timeRange]);
+    }, [orders, timeRange, user]);
 
     const capacityData = useMemo(() => {
         const filtered = orders.filter(o => isOrderInTimeRange(o.createdAt, timeRange));
@@ -571,6 +578,28 @@ const ManufacturerDashboard = () => {
                 };
             });
     }, [orders, user?.id, user?._id]);
+
+    const recentPurchases = useMemo(() => {
+        const loggedInUserId = resolveUserId(user);
+        const purchaseOrders = orders.filter((o) => {
+            const buyerId = (o.buyer?._id || o.buyer?.id || o.buyer)?.toString();
+            return buyerId && loggedInUserId && buyerId === loggedInUserId;
+        });
+
+        return [...purchaseOrders]
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+            .slice(0, 5)
+            .map((o) => ({
+                id: o._id.slice(-8).toUpperCase(),
+                fullId: o._id,
+                supplier: o.items?.[0]?.seller?.name || o.manufacturer?.name || 'Supplier',
+                buyer: o.items?.[0]?.seller?.name || 'Supplier',
+                items: `${(o.items || []).reduce((s, i) => s + (i.quantity || 0), 0)} Units`,
+                amount: o.totalAmount || 0,
+                status: o.status || 'pending',
+                date: o.createdAt || new Date()
+            }));
+    }, [orders, user]);
 
     if (loading && orders.length === 0 && products.length === 0) {
         return (
@@ -729,11 +758,18 @@ const ManufacturerDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="w-full">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
                     <OrdersTable
                         orders={recentOrders}
                         loading={loading || filtering}
                         onAddCatalogClick={() => router.push('/manufacturer/products/new')}
+                    />
+                    <OrdersTable
+                        orders={recentPurchases}
+                        variant="purchases"
+                        viewAllHref="/manufacturer/purchases"
+                        loading={loading || filtering}
+                        onAddCatalogClick={() => router.push('/wholesaler/marketplace')}
                     />
                 </div>
             </section>

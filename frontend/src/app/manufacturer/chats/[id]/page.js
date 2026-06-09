@@ -305,7 +305,7 @@ export default function ManufacturerChatThreadPage() {
                                 const p = isBuy ? t.sellerId : t.buyerId;
                                 const last = t.messages?.length ? t.messages[t.messages.length - 1] : null;
                                 const sideImg = getProductImage(t);
-                                const isUnread = last && !last.read && String(last.senderId?._id || last.senderId) !== String(uid);
+                                const isUnread = last && !last.isRead && String(last.senderId?._id || last.senderId) !== String(uid);
                                 const isActive = String(t._id) === String(id);
 
                                 return (
@@ -418,36 +418,15 @@ export default function ManufacturerChatThreadPage() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 z-0 flex flex-col">
                         {(thread?.messages || []).length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fadeIn">
-                                <div className="w-20 h-20 bg-[#FFFFFF] rounded-full border border-[#E5E7EB] shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex items-center justify-center mb-6 relative">
-                                    <Handshake className="text-[#00A878]" size={36} />
-                                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#0F172A] rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                                        <Sparkles className="text-white" size={12} />
-                                    </div>
+                                <div className="w-20 h-20 bg-[#FFFFFF] rounded-full border border-[#E5E7EB] shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex items-center justify-center mb-6">
+                                    <Inbox className="text-[#00A878]" size={36} />
                                 </div>
                                 <h3 className="font-sans text-[22px] font-[800] text-[#0F172A] tracking-tight mb-3">
-                                    Start Your Wholesale Conversation
+                                    No active conversations yet
                                 </h3>
-                                <p className="font-sans text-[14px] text-[#64748B] font-[500] mb-8 max-w-md leading-relaxed">
-                                    Connect directly with the supplier to finalize terms. Messages are securely stored and visible for order transparency.
+                                <p className="font-sans text-[14px] text-[#64748B] font-[500] max-w-md leading-relaxed">
+                                    Send a message below to start this conversation with the buyer.
                                 </p>
-                                <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-6 text-left shadow-[0_4px_16px_rgba(15,23,42,0.03)] w-full max-w-sm">
-                                    <h4 className="font-sans text-[12px] font-[800] text-[#0F172A] uppercase tracking-widest mb-5 flex items-center gap-2">
-                                        <Package size={16} className="text-[#00A878]"/> Topics to Discuss
-                                    </h4>
-                                    <ul className="space-y-3.5">
-                                        {[
-                                            'Bulk Pricing & Discounts',
-                                            'MOQ Requirements',
-                                            'Delivery Timelines',
-                                            'Custom Branding Options',
-                                            'Product Specifications'
-                                        ].map((topic, i) => (
-                                            <li key={i} className="flex items-center gap-3 font-sans text-[13px] font-[600] text-[#475569]">
-                                                <div className="w-1.5 h-1.5 bg-[#00A878] rounded-full shrink-0"></div> {topic}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
                             </div>
                         ) : (
                             (thread?.messages || []).map((m, idx) => {
@@ -479,7 +458,7 @@ export default function ManufacturerChatThreadPage() {
                                                 {formatTime(m.createdAt || m.date)}
                                             </span>
                                             {isMine && (
-                                                m.read ? (
+                                                m.isRead ? (
                                                     <CheckCheck size={14} className="text-[#00A878]" />
                                                 ) : (
                                                     <Check size={14} className="text-[#94A3B8]" />

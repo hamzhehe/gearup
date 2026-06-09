@@ -4,30 +4,16 @@ import React, { useMemo } from 'react';
 import { Banknote, ShoppingCart, Activity, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Skeleton from '@/components/common/Skeleton';
-import { formatPKR } from '@/lib/financeUtils';
+import { formatPKR, getPurchaseMetrics, getSalesMetrics } from '@/lib/financeUtils';
 import { isOrderInTimeRange } from '@/lib/dashboardUtils';
+import { resolveUserId } from '@/lib/dashboardAnalytics';
 
 const FinancialInsights = ({ orders = [], user, timeRange, loading = false }) => {
     const kpiData = useMemo(() => {
-        const filtered = orders.filter(o => isOrderInTimeRange(o.createdAt, timeRange));
-
-        let totalSalesVal = 0;
-        let totalPurchasesVal = 0;
-
-        filtered.forEach(o => {
-            const status = (o.status || '').toLowerCase();
-            if (status === 'cancelled' || status === 'refunded') return;
-
-            const amount = o.totalAmount || 0;
-            const buyerId = (o.buyer?._id || o.buyer?.id || o.buyer)?.toString();
-            const currentUserId = (user?._id || user?.id)?.toString();
-
-            if (buyerId === currentUserId) {
-                totalPurchasesVal += amount;
-            } else {
-                totalSalesVal += amount;
-            }
-        });
+        const filtered = orders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange));
+        const userId = resolveUserId(user);
+        const { totalRevenue: totalSalesVal, totalSalesCount } = getSalesMetrics(filtered, userId);
+        const { totalPurchasesAmount: totalPurchasesVal } = getPurchaseMetrics(filtered, userId);
 
         return [
             {

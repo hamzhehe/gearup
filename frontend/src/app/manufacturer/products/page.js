@@ -14,7 +14,7 @@ import Skeleton from '@/components/common/Skeleton';
 import Badge from '@/components/common/Badge';
 import { formatPKR } from '@/lib/financeUtils';
 import { resolveProductImageUrl, PRODUCT_PLACEHOLDER } from '@/lib/marketplaceData';
-import { formatMoqDisplay } from '@/utils/moq';
+import { formatMoqDisplay, formatStockWithUnit } from '@/utils/moq';
 import { normalizeLoadedPackSize } from '@/lib/bulkPackaging';
 import VerificationStatusBanner from '@/components/shared/VerificationStatusBanner';
 import { isApprovedVerification } from '@/lib/verificationStats';
@@ -85,7 +85,7 @@ const ProductsPage = () => {
                     id: p._id,
                     name: p.name,
                     image: p.images?.[0] || null,
-                    price: p.price || 0,
+                    price: p.pricePerBulkUnit || p.price || 0,
                     stock: p.stock || 0,
                     moq: p.minimumOrderQuantity || 1,
                     bulkUnit: p.bulkUnit || 'Dozen',
@@ -350,7 +350,7 @@ const ProductsPage = () => {
                                 key={product.id} 
                                 className="bg-[#FFFFFF] rounded-[16px] border border-[#E5E7EB] overflow-hidden flex flex-col hover:shadow-[0_8px_28px_rgba(15,23,42,0.07)] hover:-translate-y-[3px] transition-all duration-300 min-h-[360px] group/card"
                             >
-                                <div className="relative aspect-[4/3] bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] border-b border-[#E5E7EB] p-5 flex items-center justify-center shrink-0 overflow-hidden">
+                                <div className="relative aspect-[4/3] bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] border-b border-[#E5E7EB] overflow-hidden shrink-0">
                                     {/* Status Badge */}
                                     <div className="absolute top-4 left-4 z-10">
                                         <div className={`px-3 flex items-center h-[26px] rounded-full text-[11px] font-[600] uppercase tracking-wide shadow-sm ${getStatusBadge(product.status)}`}>
@@ -362,7 +362,7 @@ const ProductsPage = () => {
                                         <img
                                             src={resolveProductImageUrl(product.image)}
                                             alt={product.name}
-                                            className="w-full h-full object-contain mix-blend-multiply group-hover/card:scale-105 transition-transform duration-500"
+                                            className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
                                             onError={(e) => {
                                                 e.currentTarget.onerror = null;
                                                 e.currentTarget.src = resolveProductImageUrl(null);
@@ -381,16 +381,13 @@ const ProductsPage = () => {
                                     <h3 className="font-sans text-[16px] font-[700] text-[#0F172A] line-clamp-2 leading-snug mb-4">{product.name}</h3>
 
                                     <div className="mt-auto">
-                                        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                        <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
                                             <div className="font-sans font-[700] text-[20px] text-[#0F172A] tracking-tight">{formatPKR(product.price)}</div>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className={`w-2 h-2 rounded-full ${
-                                                    product.status === 'Low Stock' ? 'bg-[#F59E0B]' :
-                                                    product.status === 'Out of Stock' ? 'bg-[#EF4444]' :
-                                                    'bg-[#00A878]'
-                                                }`}></span>
-                                                <span className="text-[13px] font-[500] text-[#64748B]">Stock: {product.stock.toLocaleString()}</span>
-                                            </div>
+                                            <div className="text-[12px] font-[600] text-[#64748B]">Unit: {product.bulkUnit || 'Unit'}</div>
+                                        </div>
+                                        <div className="flex flex-col gap-1 mb-4 text-[12px] text-[#64748B]">
+                                            <span>Stock: {formatStockWithUnit(product.stock, product.bulkUnit, product.moq).stockLabel}</span>
+                                            <span>MOQ: {formatStockWithUnit(product.stock, product.bulkUnit, product.moq).moqLabel}</span>
                                         </div>
 
                                         <div className="action-row mt-1">
@@ -471,10 +468,8 @@ const ProductsPage = () => {
                                         <td className="px-6 py-5">
                                             <div className="font-sans font-[700] text-[15px] text-[#0F172A]">{formatPKR(stats.totalValue)}</div>
                                         </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <button className="p-2.5 bg-[#FFFFFF] border border-[#E5E7EB] text-[#64748B] rounded-xl group-hover:bg-[#00A878] group-hover:border-[#00A878] group-hover:text-white transition-all shadow-sm group-hover:shadow-md">
-                                                <ArrowRight size={16} />
-                                            </button>
+                                        <td className="px-6 py-5 text-right text-[#94A3B8] text-[12px] font-[600]">
+                                            {stats.count} products
                                         </td>
                                     </tr>
                                 ))}

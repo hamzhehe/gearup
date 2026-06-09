@@ -33,6 +33,7 @@ const OrderSchema = new mongoose.Schema({
                 required: true
             },
             name: String,
+            sku: String,
             quantity: {
                 type: Number, // In bulk units
                 required: true

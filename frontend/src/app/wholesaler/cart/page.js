@@ -1,7 +1,6 @@
 "use client";
 
-import { getApiBaseUrl } from '@/lib/api';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -96,7 +95,7 @@ const WholesalerCartPage = () => {
                             id: product._id,
                             productId: product._id,
                             name: product.name,
-                            image: product.images?.[0] || null,
+                            image: resolveProductImageUrl(product.images?.[0] || product.image),
                             manufacturer: product.seller?.businessDetails?.businessName
                                 ? `${product.seller.businessDetails.businessName} (${product.seller.name})`
                                 : (product.seller?.name || 'Unknown Supplier'),
@@ -114,7 +113,14 @@ const WholesalerCartPage = () => {
                             const existing = prev.find(i => i.productId === productId);
                             let newCart;
                             if (existing) {
-                                newCart = prev.map(i => i.productId === productId ? { ...i, quantity: Math.max(i.quantity + qty, product.minimumOrderQuantity || 1) } : i);
+                                newCart = prev.map(i => i.productId === productId ? {
+                                    ...i,
+                                    quantity: Math.max(i.quantity + qty, product.minimumOrderQuantity || 1),
+                                    image: resolveProductImageUrl(product.images?.[0] || product.image) || i.image,
+                                    price: product.pricePerBulkUnit || i.price,
+                                    bulkUnit: product.bulkUnit || i.bulkUnit,
+                                    moq: product.minimumOrderQuantity || i.moq,
+                                } : i);
                             } else {
                                 newCart = [...prev, newItem];
                             }
@@ -281,7 +287,15 @@ const WholesalerCartPage = () => {
                                         {/* LEFT: Product Image */}
                                         <div className="w-[130px] h-[130px] bg-[#F8FAFC] rounded-[16px] overflow-hidden shrink-0 flex items-center justify-center p-3 border border-[#E5E7EB]/60">
                                             {item.image ? (
-                                                <img src={item.image} className="w-full h-full object-cover rounded-[10px] group-hover:scale-110 transition-transform duration-500" alt={item.name} />
+                                                <img
+                                                    src={item.image}
+                                                    className="w-full h-full object-cover rounded-[10px] group-hover:scale-110 transition-transform duration-500"
+                                                    alt={item.name}
+                                                    onError={(e) => {
+                                                        e.currentTarget.onerror = null;
+                                                        e.currentTarget.src = resolveProductImageUrl(null);
+                                                    }}
+                                                />
                                             ) : (
                                                 <Package size={36} className="text-[#94A3B8]" strokeWidth={1.5} />
                                             )}

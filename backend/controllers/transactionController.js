@@ -6,6 +6,7 @@ const { validateCommissionInput, loadCommissionSettings } = require('../utils/co
 const Refund = require('../models/Refund');
 const Payout = require('../models/Payout');
 const AuditLog = require('../models/AuditLog');
+const { recordOrderPaymentTransactions, reverseOrderPaymentTransactions } = require('../utils/orderTransactionSync');
 
 // @desc    Get all transactions with filters (Admin only)
 // @route   GET /api/transactions/admin
@@ -396,8 +397,12 @@ exports.createRefund = async (req, res, next) => {
             return res.status(404).json({ success: false, error: 'Order not found' });
         }
 
-        // Verify that transaction exists
-        const txs = await Transaction.find({ order: orderId, status: { $in: ['Completed', 'Pending', 'Hold'] } });
+        // Ensure commission transactions exist (wallet / legacy orders may lack them)
+        let txs = await Transaction.find({ order: orderId, status: { $in: ['Completed', 'Pending', 'Hold', 'Paid'] } });
+        if (txs.length === 0 && (order.isPaymentVerified || order.paymentStatus === 'verified')) {
+            await recordOrderPaymentTransactions(order);
+            txs = await Transaction.find({ order: orderId, status: { $in: ['Completed', 'Pending', 'Hold', 'Paid'] } });
+        }
         if (txs.length === 0) {
             return res.status(400).json({ success: false, error: 'No active transaction found for this order' });
         }
@@ -457,6 +462,10 @@ exports.createRefund = async (req, res, next) => {
         } catch (payoutErr) {
             console.error('[payout] refund sync:', payoutErr.message);
         }
+
+        const totalCommissionRefunded = refunds.reduce((sum, r) => sum + (r.commissionRefunded || 0), 0);
+        const totalRefundAmount = refunds.reduce((sum, r) => sum + (r.refundAmount || 0), 0);
+        await reverseOrderPaymentTransactions(order, totalCommissionRefunded, totalRefundAmount);
 
         // Email Automation: Notify Buyer of Refund
         try {

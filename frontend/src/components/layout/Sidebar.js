@@ -72,7 +72,7 @@ const Sidebar = ({
       { label: 'Sales Orders', path: '/manufacturer/orders', icon: ShoppingCart },
       { label: 'Purchase Orders', path: '/wholesaler/orders', icon: ShoppingBag },
       { label: 'Marketplace', path: '/wholesaler/marketplace', icon: Search },
-      { label: 'Seller Chats', path: '/manufacturer/chats', icon: MessageSquare, badge: true, badgeCount: 5 },
+      { label: 'Seller Chats', path: '/manufacturer/chats', icon: MessageSquare, badge: true },
       { label: 'Payments', path: '/manufacturer/transactions', icon: Banknote },
       { label: 'Order Issues', path: '/manufacturer/disputes', icon: AlertTriangle },
       { label: 'Analytics', path: '/manufacturer/analytics', icon: BarChart3 },

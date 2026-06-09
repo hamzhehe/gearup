@@ -13,6 +13,7 @@ const OrdersTable = ({
   onAddCatalogClick,
   variant = 'sales',
   viewAllHref = '/manufacturer/orders',
+  purchaseViewAllHref = '/manufacturer/purchases',
   emptyTitle,
   emptyDescription,
   emptyActionLabel
@@ -186,11 +187,11 @@ const OrdersTable = ({
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm ${getAvatarGradient(idx)}`}>
-                          {getInitials(order.buyer)}
+                          {getInitials(isPurchases ? (order.supplier || order.buyer) : order.buyer)}
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[14px] font-semibold text-[#0F172A]">
-                            {order.buyer}
+                            {isPurchases ? (order.supplier || order.buyer) : order.buyer}
                             </span>
                             <span className="text-[11px] font-medium text-[#64748B]">
                                 {isPurchases ? 'Supplier' : 'Wholesaler'}
@@ -240,7 +241,7 @@ const OrdersTable = ({
                           style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06)' }}
                         >
                           <button 
-                            onClick={(e) => { e.stopPropagation(); router.push(`${isPurchases ? '/wholesaler/orders' : '/manufacturer/orders'}/${order.fullId || order.id}`); }}
+                            onClick={(e) => { e.stopPropagation(); router.push(`${isPurchases ? purchaseViewAllHref : '/manufacturer/orders'}/${order.fullId || order.id}`); }}
                             className="w-full text-left px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-[#E8FFF5] hover:text-[#00A878] flex items-center gap-2.5 transition-colors rounded-lg mx-1"
                             style={{ width: 'calc(100% - 8px)' }}
                           >

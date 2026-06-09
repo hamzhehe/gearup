@@ -12,6 +12,12 @@ import {
 } from 'recharts';
 import { isOrderInTimeRange } from '@/lib/dashboardUtils';
 import { formatPKR, formatPKRShort } from '@/lib/financeUtils';
+import {
+    getSellerSubtotal,
+    isChartEligiblePurchaseOrder,
+    isChartEligibleSellerOrder,
+    isSellerOnOrder,
+} from '@/lib/dashboardAnalytics';
 
 const PremiumAnalyticsSection = ({ orders = [], products = [], user, loading = false, timeRange, onTimeRangeChange }) => {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -20,27 +26,21 @@ const PremiumAnalyticsSection = ({ orders = [], products = [], user, loading = f
         const filtered = orders.filter(o => isOrderInTimeRange(o.createdAt, timeRange));
         
         const processOrder = (o) => {
-            const status = (o.status || '').toLowerCase();
-            if (status === 'cancelled' || status === 'refunded') return { totalSales: 0, totalPurchases: 0 };
-            
-            const buyerId = (o.buyer?._id || o.buyer?.id || o.buyer)?.toString();
             const currentUserId = (user?._id || user?.id)?.toString();
+            const buyerId = (o.buyer?._id || o.buyer?.id || o.buyer)?.toString();
             const isPurchase = buyerId === currentUserId;
-            
-            let totalSales = 0, totalPurchases = 0;
-            
+
+            let totalSales = 0;
+            let totalPurchases = 0;
+
             if (isPurchase) {
-                totalPurchases = o.totalAmount || 0;
-            } else {
-                const myStats = o.sellerStats?.find(s => (s.seller?._id || s.seller)?.toString() === currentUserId);
-                const myItems = o.items?.filter(i => (i.seller?._id || i.seller)?.toString() === currentUserId) || [];
-                
-                if (myStats || myItems.length > 0) {
-                    totalSales = myStats?.subtotal || myItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                } else {
-                    totalSales = o.totalAmount || 0;
+                if (isChartEligiblePurchaseOrder(o, currentUserId)) {
+                    totalPurchases = o.totalAmount || 0;
                 }
+            } else if (isChartEligibleSellerOrder(o, currentUserId)) {
+                totalSales = getSellerSubtotal(o, currentUserId);
             }
+
             return { totalSales, totalPurchases };
         };
 

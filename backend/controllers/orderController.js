@@ -16,6 +16,7 @@ const { getBuyerOrderApprovedTemplate, getManufacturerOrderApprovedTemplate } = 
 const { getShipmentTemplate } = require('../templates/shipmentTemplate');
 const User = require('../models/User');
 const { processWalletPayment, releaseEscrowForOrder, releaseEscrowForSeller, refundOrderEscrow } = require('../services/walletService');
+const { recordOrderPaymentTransactions } = require('../utils/orderTransactionSync');
 
 const TRACKING_LABELS = {
     pending: 'Order placed',
@@ -105,6 +106,7 @@ exports.createOrder = async (req, res, next) => {
                 product: product._id,
                 seller: sellerId,
                 name: product.name,
+                sku: product.sku || '',
                 quantity: quantity,
                 price: product.pricePerBulkUnit,
                 bulkUnit: product.bulkUnit
@@ -211,6 +213,8 @@ exports.createOrder = async (req, res, next) => {
                     });
                 }
             }
+
+            await recordOrderPaymentTransactions(order);
         }
 
         for (const sellerId of sellerMap.keys()) {
@@ -671,6 +675,8 @@ exports.updatePaymentStatus = async (req, res, next) => {
                         });
                     }
                 }
+
+                await recordOrderPaymentTransactions(order);
             }
         } else {
             return res.status(403).json({ success: false, error: 'Not authorized' });

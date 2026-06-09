@@ -11,9 +11,10 @@ import {
     PieChart, Pie, Cell, Legend
 } from 'recharts';
 import {
-    Package, DollarSign, AlertCircle, HeartPulse, TrendingUp, RefreshCw, 
-    ShoppingCart, ArrowRight, Eye, ShieldAlert, CheckCircle2, Activity
+    Package, DollarSign, AlertCircle, HeartPulse, TrendingUp, RefreshCw,
+    ShoppingCart, ArrowRight, Eye, ShieldAlert, CheckCircle2, Activity, Sparkles
 } from 'lucide-react';
+import { isSellerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
 import { formatPKR } from '@/lib/financeUtils';
 
 const COLORS = ['#00A878', '#3B82F6', '#F59E0B', '#F43F5E', '#8B5CF6'];
@@ -32,20 +33,22 @@ export default function InventoryOverviewPage() {
             const token = localStorage.getItem('token');
             const headers = { 'Authorization': `Bearer ${token}` };
 
-            // Fetch products
-            const productsRes = await fetch(`${getApiBaseUrl()}/api/products`, { headers });
+            const uid = resolveUserId(user);
+            const productsUrl = uid
+                ? `${getApiBaseUrl()}/api/products?manufacturer=${uid}&scope=inventory`
+                : `${getApiBaseUrl()}/api/products`;
+
+            const productsRes = await fetch(productsUrl, { headers });
             const productsData = await productsRes.json();
-            
-            // Fetch orders for fast-moving metrics
+
             const ordersRes = await fetch(`${getApiBaseUrl()}/api/orders`, { headers });
             const ordersData = await ordersRes.json();
 
             if (productsData.success) {
-                const myProducts = productsData.data.filter(p => p.seller?._id === user?.id || p.seller === user?.id || p.seller?._id === user?._id);
-                setProducts(myProducts);
+                setProducts(productsData.data || []);
             }
             if (ordersData.success) {
-                const mySales = ordersData.data.filter(o => o.seller?._id === user?.id || o.seller === user?.id || o.seller?._id === user?._id);
+                const mySales = ordersData.data.filter((o) => isSellerOnOrder(o, uid));
                 setOrders(mySales);
             }
         } catch (err) {
@@ -205,7 +208,7 @@ export default function InventoryOverviewPage() {
                             {syncing ? 'Syncing...' : 'Sync Inventory'}
                         </button>
                         <button 
-                            onClick={() => router.push('/manufacturer/products/add')}
+                            onClick={() => router.push('/manufacturer/products/new')}
                             className="flex items-center gap-2 bg-[#00A878] hover:bg-[#0DBB85] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_4px_12px_-4px_rgba(0,200,117,0.4)] hover:shadow-[0_8px_16px_-6px_rgba(0,200,117,0.5)] hover:-translate-y-0.5 outline-none"
                         >
                             <ShoppingCart size={16} /> Replenish Stock

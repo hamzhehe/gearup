@@ -1,11 +1,22 @@
 /** Shared date-range filter for dashboard metrics */
+export function normalizeTimeRange(range) {
+    const aliases = {
+        '7days': 'week',
+        '30days': 'month',
+        '3months': '6months',
+        '12months': 'year',
+    };
+    return aliases[range] || range;
+}
+
 export function isOrderInTimeRange(orderDateStr, range) {
     if (!orderDateStr) return false;
+    const normalizedRange = normalizeTimeRange(range);
     const orderDate = new Date(orderDateStr);
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    switch (range) {
+    switch (normalizedRange) {
         case 'today':
             return orderDate >= startOfToday;
         case 'week':
@@ -16,8 +27,10 @@ export function isOrderInTimeRange(orderDateStr, range) {
             return orderDate >= new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
         case 'year':
             return orderDate >= new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        default:
+        case 'custom':
             return true;
+        default:
+            return normalizedRange === range ? true : false;
     }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { getApiBaseUrl } from '@/lib/api';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -52,12 +53,7 @@ export default function WholesalerChatsPage() {
         load();
     }, [load]);
 
-    const getProductImage = (t) => {
-        const imgUrl = t.product?.image || t.product?.images?.[0];
-        if (!imgUrl) return null;
-        if (imgUrl.startsWith('http')) return imgUrl;
-        return `${getApiBaseUrl()}`;
-    };
+    const getProductImage = (t) => resolveProductImageUrl(t.product?.image || t.product?.images?.[0]);
 
     const formatTime = (isoString) => {
         if (!isoString) return '';
@@ -142,7 +138,7 @@ export default function WholesalerChatsPage() {
                                 const peer = isBuyer ? t.sellerId : t.buyerId;
                                 const last = t.messages?.length ? t.messages[t.messages.length - 1] : null;
                                 const img = getProductImage(t);
-                                const isUnread = last && !last.read && String(last.senderId?._id || last.senderId) !== String(uid);
+                                const isUnread = last && !last.isRead && String(last.senderId?._id || last.senderId) !== String(uid);
 
                                 return (
                                     <Link
@@ -203,34 +199,10 @@ export default function WholesalerChatsPage() {
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center p-8 text-center bg-[#F8FAFC]/50 z-0 relative">
                     <div className="empty-state-enterprise w-full max-w-lg border-none shadow-none bg-transparent">
                         <div className="icon-circle relative mx-auto">
-                            <Handshake size={32} />
-                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#0F172A] rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                                <Sparkles className="text-white" size={12} />
-                            </div>
+                            <Inbox size={32} />
                         </div>
-                        <h3>Start Your Wholesale Conversation</h3>
-                        <p>
-                            Connect directly with the supplier to finalize terms. Messages are securely stored and visible for order transparency.
-                        </p>
-                        
-                        <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-6 text-left shadow-[0_4px_16px_rgba(15,23,42,0.03)] w-full max-w-sm mx-auto mt-6">
-                            <h4 className="font-sans text-[12px] font-[800] text-[#0F172A] uppercase tracking-widest mb-5 flex items-center gap-2">
-                                <Package size={16} className="text-[#00A878]"/> Topics to Discuss
-                            </h4>
-                            <ul className="space-y-3.5">
-                                {[
-                                    'Bulk Pricing & Discounts',
-                                    'MOQ Requirements',
-                                    'Delivery Timelines',
-                                    'Custom Branding Options',
-                                    'Product Specifications'
-                                ].map((topic, i) => (
-                                    <li key={i} className="flex items-center gap-3 font-sans text-[13px] font-[600] text-[#475569]">
-                                        <div className="w-1.5 h-1.5 bg-[#00A878] rounded-full shrink-0"></div> {topic}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        <h3>No active conversations yet</h3>
+                        <p>Select a conversation from the list or start one from a product page in the marketplace.</p>
                     </div>
                 </div>
 

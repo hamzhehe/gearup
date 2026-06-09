@@ -2,6 +2,24 @@ import { isOrderInTimeRange } from '@/lib/dashboardUtils';
 
 export const COMPLETED_SALE_STATUSES = new Set(['delivered', 'completed']);
 
+/** Orders that should appear in revenue / sales charts (exclude pending/unconfirmed). */
+export const CHART_ELIGIBLE_STATUSES = new Set([
+    'processing',
+    'confirmed',
+    'shipped',
+    'delivered',
+    'completed',
+]);
+
+export const EXCLUDED_CHART_STATUSES = new Set([
+    'pending',
+    'pending_approval',
+    'cancelled',
+    'refunded',
+    'draft',
+    'rejected',
+]);
+
 export function normalizeStatus(status) {
     return (status || '').toLowerCase().trim();
 }
@@ -35,6 +53,33 @@ export function getSellerStatus(order, userId) {
         (s) => (s.seller?._id || s.seller?.id || s.seller)?.toString() === userId
     );
     return normalizeStatus(myStats?.status || order.status);
+}
+
+export function isChartEligibleSellerOrder(order, userId) {
+    if (!isSellerOnOrder(order, userId)) return false;
+    const status = getSellerStatus(order, userId);
+    if (EXCLUDED_CHART_STATUSES.has(status)) return false;
+    return CHART_ELIGIBLE_STATUSES.has(status);
+}
+
+export function isChartEligiblePurchaseOrder(order, userId) {
+    const buyerId = (order.buyer?._id || order.buyer?.id || order.buyer)?.toString();
+    if (!userId || buyerId !== userId) return false;
+    const status = normalizeStatus(order.status);
+    if (EXCLUDED_CHART_STATUSES.has(status)) return false;
+    if (CHART_ELIGIBLE_STATUSES.has(status)) return true;
+    return Boolean(order.isPaymentVerified) && status === 'processing';
+}
+
+export function getSellerSubtotal(order, userId) {
+    const myStats = order.sellerStats?.find(
+        (s) => (s.seller?._id || s.seller?.id || s.seller)?.toString() === userId
+    );
+    if (myStats?.subtotal != null) return myStats.subtotal;
+    return getSellerOrderItems(order, userId).reduce(
+        (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+        0
+    );
 }
 
 export function isCompletedSaleOrder(order, userId) {

@@ -51,6 +51,18 @@ export function formatMoqDisplay(moq, bulkUnit = 'Unit', packSize = DOZEN_UNITS_
  * @param {number} productMOQ - Product's MOQ (should not exceed platform MOQ)
  * @returns {Object} Validation result
  */
+export function formatStockWithUnit(stock, bulkUnit = 'Unit', moq = 1) {
+    const qty = Math.max(0, Number(stock) || 0);
+    const unit = bulkUnit || 'Unit';
+    const unitLabel = pluralizeBulkUnit(unit, qty);
+    const moqLabel = formatMoqDisplay(moq, unit).primary;
+    return {
+        stockLabel: `${qty.toLocaleString()} ${unitLabel}`,
+        moqLabel,
+        unit,
+    };
+}
+
 export const validateMOQ = (quantity, productMOQ = PLATFORM_MOQ) => {
     const effectiveMOQ = Math.min(productMOQ, PLATFORM_MOQ);
 
