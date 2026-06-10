@@ -290,24 +290,28 @@ const MarketplacePage = ({ isDashboard = true }) => {
             const data = await response.json();
             if (data.success) {
                 setError(null);
-                const mappedProducts = data.data.map(p => {
-                    const sellerId = p.seller?._id ?? p.seller;
-                    return {
-                        id: p._id,
-                        name: p.name,
-                        image: resolveProductImageUrl(p.images?.[0] || p.image),
-                        supplier: p.seller?.name || 'Unknown Seller',
-                        sellerId,
-                        location: p.seller?.businessDetails?.city || 'Pakistan',
-                        moq: p.minimumOrderQuantity || 1,
-                        price: p.pricePerBulkUnit || 0,
-                        bulkUnit: p.bulkUnit || 'Dozen',
-                        packSize: normalizeLoadedPackSize(p.bulkUnit || 'Dozen', p.packSize) || 12,
-                        stock: p.stock || 0,
-                        industry: (p.category || 'sports').toLowerCase(),
-                        verified: p.seller?.businessDetails?.isVerified || p.seller?.verificationStatus === 'approved' || p.seller?.verificationStatus === 'verified' || false
-                    };
-                });
+                const viewerId = String(user?.id || user?._id || '');
+                const mappedProducts = data.data
+                    .map((p) => {
+                        const seller = p.manufacturer || p.seller;
+                        const sellerId = seller?._id ?? seller;
+                        return {
+                            id: p._id,
+                            name: p.name,
+                            image: resolveProductImageUrl(p.images?.[0] || p.image),
+                            supplier: seller?.name || 'Unknown Seller',
+                            sellerId,
+                            location: seller?.businessDetails?.city || 'Pakistan',
+                            moq: p.minimumOrderQuantity || 1,
+                            price: p.pricePerBulkUnit || 0,
+                            bulkUnit: p.bulkUnit || 'Dozen',
+                            packSize: normalizeLoadedPackSize(p.bulkUnit || 'Dozen', p.packSize) || 12,
+                            stock: p.stock || 0,
+                            industry: (p.category || 'sports').toLowerCase(),
+                            verified: seller?.businessDetails?.isVerified || seller?.verificationStatus === 'approved' || seller?.verificationStatus === 'verified' || false
+                        };
+                    })
+                    .filter((product) => !viewerId || String(product.sellerId || '') !== viewerId);
                 setProducts(mappedProducts);
             }
         } catch (err) {
@@ -369,38 +373,52 @@ const MarketplacePage = ({ isDashboard = true }) => {
         }
     };
 
-    const filteredProducts = useMemo(() => {
-        return products.filter(product => {
+    const currentUserId = useMemo(
+        () => String(user?.id || user?._id || ''),
+        [user?.id, user?._id]
+    );
+
+    const applyProductFilters = useCallback((items) => {
+        return items.filter((product) => {
             if (filters.industry !== 'all' && product.industry !== filters.industry) return false;
             if (filters.location !== 'all' && !product.location.toLowerCase().includes(filters.location.toLowerCase())) return false;
             if (filters.verifiedOnly && !product.verified) return false;
             if (filters.moq !== 'all') {
-                const moqValue = parseInt(filters.moq);
+                const moqValue = parseInt(filters.moq, 10);
                 if (product.moq > moqValue) return false;
             }
-            if (filters.searchQuery &&
+            if (
+                filters.searchQuery &&
                 !product.name.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
-                !product.supplier.toLowerCase().includes(filters.searchQuery.toLowerCase())) return false;
+                !product.supplier.toLowerCase().includes(filters.searchQuery.toLowerCase())
+            ) {
+                return false;
+            }
             return true;
         });
-    }, [products, filters]);
+    }, [filters]);
 
-    const sortedProducts = useMemo(() => {
-        let items = [...filteredProducts];
-        if (isAdvertisementSystemEnabled && sponsoredProductIds.size) {
-            items = items.filter((p) => !sponsoredProductIds.has(String(p.id)));
+    const sortProductList = useCallback((items, excludeSponsored = true) => {
+        let list = [...items];
+        if (excludeSponsored && isAdvertisementSystemEnabled && sponsoredProductIds.size) {
+            list = list.filter((p) => !sponsoredProductIds.has(String(p.id)));
         }
         if (sortBy === 'price_low') {
-            items.sort((a, b) => a.price - b.price);
+            list.sort((a, b) => a.price - b.price);
         } else if (sortBy === 'price_high') {
-            items.sort((a, b) => b.price - a.price);
+            list.sort((a, b) => b.price - a.price);
         } else if (sortBy === 'verified') {
-            items.sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
+            list.sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
         } else {
-            items.sort((a, b) => b.id.localeCompare(a.id));
+            list.sort((a, b) => b.id.localeCompare(a.id));
         }
-        return items;
-    }, [filteredProducts, sortBy, sponsoredProductIds]);
+        return list;
+    }, [sortBy, sponsoredProductIds]);
+
+    const sortedProducts = useMemo(
+        () => sortProductList(applyProductFilters(products)),
+        [products, applyProductFilters, sortProductList]
+    );
 
     const totalProducts = products.length;
     const verifiedSuppliersCount = new Set(products.filter(p => p.verified).map(p => p.supplier)).size;
@@ -419,47 +437,27 @@ const MarketplacePage = ({ isDashboard = true }) => {
 
     return (
         <div className="space-y-6 pb-16">
-            {/* Premium Enterprise Hero Section */}
-            <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] p-8 shadow-[0_8px_24px_rgba(15,23,42,0.05)] flex flex-col items-center text-center justify-center gap-6 mb-8 relative overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[150%] bg-[#00A878]/10 rounded-[100%] blur-[100px] pointer-events-none -z-10"></div>
-                
-                <div className="flex flex-col items-center gap-2 max-w-3xl mx-auto">
-                    <h1 className="text-[40px] font-[800] text-[#0F172A] leading-tight tracking-tight">
-                        Wholesale Marketplace
-                    </h1>
-                    <p className="text-[16px] text-[#64748B] max-w-2xl">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Wholesale Marketplace</h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
                         Source premium sports equipment directly from verified manufacturing partners. Discover, negotiate, and order in bulk with absolute confidence.
                     </p>
-                    
-                    {/* Inline Premium Stats */}
-                    <div className="flex items-center justify-center gap-3 md:gap-4 font-sans text-[13px] text-[#64748B] font-[500] pt-4 flex-wrap w-full">
-                        <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2.5 rounded-[12px] border border-[#E5E7EB] shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:border-[#CBD5E1] transition-colors">
-                            <Package size={16} className="text-[#00A878]" />
-                            <span className="font-[700] text-[#0F172A]">{totalProducts || '-'}</span>
-                            <span>Products</span>
-                        </div>
-                        <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2.5 rounded-[12px] border border-[#E5E7EB] shadow-[0_2px_8px_rgba(15,23,42,0.02)] hover:border-[#CBD5E1] transition-colors">
-                            <Shield size={16} className="text-[#00A878]" />
-                            <span className="font-[700] text-[#0F172A]">{verifiedSuppliersCount || '-'}</span>
-                            <span>Verified Partners</span>
-                        </div>
-                        <div className="flex items-center gap-2.5 bg-[#E8FFF5] px-4 py-2.5 rounded-[12px] border border-[#00A878]/20 text-[#00A878] shadow-[0_2px_8px_rgba(0,168,120,0.05)]">
-                            <div className="w-2 h-2 rounded-full bg-[#00A878] animate-pulse"></div>
-                            <span className="font-[700] tracking-wide">Live Market</span>
-                        </div>
-                    </div>
                 </div>
-
-                {/* Bottom: Premium Enterprise Badge */}
-                <div className="shrink-0 flex justify-center mt-2">
-                    <div className="inline-flex items-center gap-3 px-5 py-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[16px] shadow-[0_8px_16px_rgba(15,23,42,0.04)] cursor-default">
-                        <div className="p-2.5 bg-[#F8FAFC] rounded-[12px] text-[#00A878]">
-                            <Sparkles size={20} />
-                        </div>
-                        <div className="flex flex-col items-start pr-2 text-left">
-                            <span className="font-sans text-[13px] font-[800] text-[#0F172A] uppercase tracking-widest leading-none mb-1.5">Enterprise Ready</span>
-                            <span className="font-sans text-[12px] text-[#64748B] font-[500] leading-none">B2B Network</span>
-                        </div>
+                
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2.5 rounded-xl border border-[#E5E7EB] shadow-sm">
+                        <Package size={16} className="text-[#00A878]" />
+                        <span className="font-bold text-[#0F172A] text-sm">{totalProducts || '-'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2.5 rounded-xl border border-[#E5E7EB] shadow-sm">
+                        <Shield size={16} className="text-[#00A878]" />
+                        <span className="font-bold text-[#0F172A] text-sm">{verifiedSuppliersCount || '-'}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 bg-[#E8FFF5] px-4 py-2.5 rounded-xl border border-[#00A878]/20 text-[#00A878] shadow-sm">
+                        <div className="w-2 h-2 rounded-full bg-[#00A878] animate-pulse"></div>
+                        <span className="font-bold text-sm tracking-wide">Live Market</span>
                     </div>
                 </div>
             </div>
@@ -577,7 +575,6 @@ const MarketplacePage = ({ isDashboard = true }) => {
                 })}
             </div>
 
-            {/* Main Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {sortedProducts.map((product) => (
                     <div key={product.id} className="product-card-enterprise h-full group">
@@ -588,6 +585,10 @@ const MarketplacePage = ({ isDashboard = true }) => {
                                     src={product.image}
                                     alt={product.name}
                                     className="w-full h-full object-contain mix-blend-multiply"
+                                    onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src = resolveProductImageUrl(null);
+                                    }}
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[#94A3B8]">
@@ -656,7 +657,7 @@ const MarketplacePage = ({ isDashboard = true }) => {
                             {/* Interactive triggers */}
                             <div className="space-y-3 shrink-0">
                                 <div className="flex gap-2">
-                                    {(!user || product?.sellerId !== (user?.id || user?._id)) ? (
+                                    {(!user || String(product?.sellerId || '') !== currentUserId) ? (
                                         <button
                                             type="button"
                                             onClick={() => handleAddToCart(product)}
@@ -669,7 +670,7 @@ const MarketplacePage = ({ isDashboard = true }) => {
                                             Your Product
                                         </div>
                                     )}
-                                    {user && product?.sellerId !== user?.id && (
+                                    {user && String(product?.sellerId || '') !== currentUserId && (
                                         <button
                                             type="button"
                                             disabled={chatOpeningId === product.id}
@@ -698,11 +699,11 @@ const MarketplacePage = ({ isDashboard = true }) => {
                             <FilterX size={32} />
                         </div>
                         <h3>
-                            {products.length === 0 ? 'No products available' : 'No matches found'}
+                            {products.length === 0 ? 'No marketplace products available' : 'No matches found'}
                         </h3>
                         <p>
                             {products.length === 0
-                                ? 'There are no products available at the moment. Please check back later.'
+                                ? 'There are no products from other suppliers right now. Check back later.'
                                 : 'Adjust your search queries or category filters to find the equipment needed.'}
                         </p>
                     </div>
