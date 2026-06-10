@@ -279,13 +279,12 @@ const ManufacturerOrdersPage = () => {
         return (
             <div className="space-y-6 w-full animate-in fade-in duration-300">
                 {/* Header */}
-                <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 shadow-[0_8px_24px_rgba(15,23,42,0.05)] flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-3">
-                            <Package className="text-[#00A878]" size={36} />
-                            <h1 className="text-[40px] font-bold text-[#0F172A] leading-none">Order Hub</h1>
-                        </div>
-                        <p className="text-[16px] text-[#64748B]">Manage and track your wholesale inbound orders in real time.</p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                    <div>
+                        <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Sales Orders</h1>
+                        <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
+                            Manage and track your inbound sales orders in real time.
+                        </p>
                     </div>
                 </div>
 
@@ -312,18 +311,17 @@ const ManufacturerOrdersPage = () => {
     return (
         <div className="flex flex-col gap-6 w-full">
             {/* Header */}
-            <div className="page-header-enterprise flex flex-col items-center sm:items-start text-center sm:text-left justify-center gap-4">
-                <div className="flex flex-col items-center gap-2">
-                    <div className="flex items-center justify-center gap-3">
-                        <Package className="text-[#00A878]" size={32} />
-                        <h1 className="text-[32px] font-[800] text-[#0F172A] leading-none">Order Hub</h1>
-                    </div>
-                    <p className="text-[15px] text-[#64748B]">Manage and track your wholesale inbound orders in real time.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Sales Orders</h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
+                        Manage and track your inbound sales orders in real time.
+                    </p>
                 </div>
-                <div className="flex justify-center mt-1">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={exportCSV}
-                        className="flex items-center gap-2 px-5 h-[44px] bg-[#00A878] hover:bg-[#0DBB85] text-white rounded-[14px] font-[700] text-[14px] transition-all shadow-[0_8px_20px_rgba(0,168,120,0.25)] hover:-translate-y-0.5"
+                        className="flex items-center gap-2 bg-[#00A878] hover:bg-[#0DBB85] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_4px_12px_-4px_rgba(0,200,117,0.4)] hover:shadow-[0_8px_16px_-6px_rgba(0,200,117,0.5)] hover:-translate-y-0.5 outline-none"
                         title="Export current view to CSV"
                     >
                         <Download size={18} />

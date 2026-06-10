@@ -562,16 +562,37 @@ const ManufacturerDashboard = () => {
                     myItems.reduce((sum, i) => sum + (i.price * i.quantity), 0) ||
                     o.totalAmount || 0;
                 const myStatus = myStats?.status || o.status || 'pending';
-                const itemCount = myItems.length > 0
-                    ? `${myItems.reduce((s, i) => s + (i.quantity || 0), 0)} Units`
-                    : `${(o.items || []).reduce((s, i) => s + (i.quantity || 0), 0)} Units`;
+
+                // Build descriptive product string
+                const displayItems = myItems.length > 0 ? myItems : (o.items || []);
+                let productDisplay;
+                if (displayItems.length === 0) {
+                    productDisplay = '0 Units';
+                } else if (displayItems.length === 1) {
+                    const item = displayItems[0];
+                    const name = item.name || item.product?.name || 'Product';
+                    const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${item.quantity || 1} ${unit})`;
+                } else if (displayItems.length === 2) {
+                    const parts = displayItems.map((item) => {
+                        const name = item.name || item.product?.name || 'Product';
+                        const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                        return `${name} (${item.quantity || 1} ${unit})`;
+                    });
+                    productDisplay = parts.join(', ');
+                } else {
+                    const first = displayItems[0];
+                    const name = first.name || first.product?.name || 'Product';
+                    const unit = first.bulkUnit || first.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${first.quantity || 1} ${unit}) +${displayItems.length - 1} more`;
+                }
 
                 return {
                     // Use same ID format as the orders page: last 8 chars of _id uppercase
                     id: o._id.slice(-8).toUpperCase(),
                     fullId: o._id,
                     buyer: o.buyer?.name || o.buyer?.businessDetails?.businessName || 'B2B Buyer',
-                    items: itemCount,
+                    items: productDisplay,
                     amount: subtotal,
                     status: myStatus,
                     date: o.createdAt || new Date()
@@ -589,16 +610,59 @@ const ManufacturerDashboard = () => {
         return [...purchaseOrders]
             .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
             .slice(0, 5)
-            .map((o) => ({
-                id: o._id.slice(-8).toUpperCase(),
-                fullId: o._id,
-                supplier: o.items?.[0]?.seller?.name || o.manufacturer?.name || 'Supplier',
-                buyer: o.items?.[0]?.seller?.name || 'Supplier',
-                items: `${(o.items || []).reduce((s, i) => s + (i.quantity || 0), 0)} Units`,
-                amount: o.totalAmount || 0,
-                status: o.status || 'pending',
-                date: o.createdAt || new Date()
-            }));
+            .map((o) => {
+                // Resolve supplier name from populated seller objects
+                const firstSeller = o.items?.[0]?.seller;
+                const supplierName =
+                    (typeof firstSeller === 'object' && firstSeller !== null)
+                        ? (firstSeller.businessDetails?.businessName || firstSeller.name)
+                        : null;
+                const mfgName =
+                    (typeof o.manufacturer === 'object' && o.manufacturer !== null)
+                        ? (o.manufacturer.businessDetails?.businessName || o.manufacturer.name)
+                        : null;
+                const sellerStatName = o.sellerStats?.[0]?.seller;
+                const statName =
+                    (typeof sellerStatName === 'object' && sellerStatName !== null)
+                        ? (sellerStatName.businessDetails?.businessName || sellerStatName.name)
+                        : null;
+                const resolvedSupplierName = supplierName || mfgName || statName || 'Unknown Supplier';
+
+                // Build descriptive product string from item names
+                const items = o.items || [];
+                let productDisplay;
+                if (items.length === 0) {
+                    productDisplay = '0 Units';
+                } else if (items.length === 1) {
+                    const item = items[0];
+                    const name = item.name || item.product?.name || 'Product';
+                    const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${item.quantity || 1} ${unit})`;
+                } else if (items.length === 2) {
+                    const parts = items.map((item) => {
+                        const name = item.name || item.product?.name || 'Product';
+                        const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                        return `${name} (${item.quantity || 1} ${unit})`;
+                    });
+                    productDisplay = parts.join(', ');
+                } else {
+                    const first = items[0];
+                    const name = first.name || first.product?.name || 'Product';
+                    const unit = first.bulkUnit || first.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${first.quantity || 1} ${unit}) +${items.length - 1} more`;
+                }
+
+                return {
+                    id: o._id.slice(-8).toUpperCase(),
+                    fullId: o._id,
+                    supplier: resolvedSupplierName,
+                    buyer: resolvedSupplierName,
+                    items: productDisplay,
+                    amount: o.totalAmount || 0,
+                    status: o.status || 'pending',
+                    date: o.createdAt || new Date()
+                };
+            });
     }, [orders, user]);
 
     if (loading && orders.length === 0 && products.length === 0) {
@@ -758,7 +822,7 @@ const ManufacturerDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 w-full">
+                <div className="grid grid-cols-1 gap-6 w-full">
                     <OrdersTable
                         orders={recentOrders}
                         loading={loading || filtering}

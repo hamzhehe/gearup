@@ -280,8 +280,8 @@ const ProductsPage = () => {
             )}
 
             {/* Tabs & Search Action Row */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-[#E2E8F0] mt-6">
-                <div className="flex items-center gap-8">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between border-b border-[#E2E8F0] mt-6 gap-y-4 lg:gap-y-0">
+                <div className="flex items-center gap-8 h-full">
                     {['products', 'categories'].map((tab) => (
                         <button
                             key={tab}
@@ -292,14 +292,14 @@ const ProductsPage = () => {
                         >
                             {tab.charAt(0).toUpperCase() + tab.slice(1)}
                             {activeTab === tab && (
-                                <div className="absolute bottom-0 left-0 w-full h-[3px] bg-[#00A878] rounded-t-md transition-all" />
+                                <div className="absolute bottom-[-1px] left-0 w-full h-[3px] bg-[#00A878] rounded-t-md transition-all z-10" />
                             )}
                         </button>
                     ))}
                 </div>
 
                 {activeTab === 'products' && (
-                    <div className="flex items-center gap-3 mb-4 lg:mb-3 w-full lg:w-auto">
+                    <div className="flex items-center gap-3 pb-4 w-full lg:w-auto">
                         <div className="relative w-full lg:w-80">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={18} />
                             <input
@@ -387,7 +387,21 @@ const ProductsPage = () => {
                                         </div>
                                         <div className="flex flex-col gap-1 mb-4 text-[12px] text-[#64748B]">
                                             <span>Stock: {formatStockWithUnit(product.stock, product.bulkUnit, product.moq).stockLabel}</span>
-                                            <span>MOQ: {formatStockWithUnit(product.stock, product.bulkUnit, product.moq).moqLabel}</span>
+                                            <span>
+                                                MOQ: {(() => {
+                                                    const moqLabel = formatMoqDisplay(product.moq, product.bulkUnit, product.packSize);
+                                                    return (
+                                                        <>
+                                                            {moqLabel.primary}
+                                                            {moqLabel.secondary && (
+                                                                <span className="block mt-0.5 text-[11px] font-[600] text-[#94A3B8]">
+                                                                    {moqLabel.secondary}
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </span>
                                         </div>
 
                                         <div className="action-row mt-1">
@@ -432,11 +446,11 @@ const ProductsPage = () => {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Category</th>
-                                    <th>SKU Count</th>
-                                    <th>Total Inventory</th>
-                                    <th>Asset Value</th>
-                                    <th></th>
+                                    <th className="px-6 py-5 text-left font-semibold text-[11px] uppercase tracking-[0.5px] text-[#64748B]">Category</th>
+                                    <th className="px-6 py-5 text-left font-semibold text-[11px] uppercase tracking-[0.5px] text-[#64748B]">SKU Count</th>
+                                    <th className="px-6 py-5 text-left font-semibold text-[11px] uppercase tracking-[0.5px] text-[#64748B]">Total Inventory</th>
+                                    <th className="px-6 py-5 text-left font-semibold text-[11px] uppercase tracking-[0.5px] text-[#64748B]">Asset Value</th>
+                                    <th className="px-6 py-5 text-right font-semibold text-[11px] uppercase tracking-[0.5px] text-[#64748B]"></th>
                                 </tr>
                             </thead>
                             <tbody>

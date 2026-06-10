@@ -240,13 +240,12 @@ const WholesalerOrdersPage = () => {
     return (
         <div className="flex flex-col gap-6 w-full pb-16">
             {/* Header */}
-            <div className="page-header-enterprise flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-3">
-                        <Package className="text-[#00A878]" size={32} />
-                        <h1 className="text-[32px] font-[800] text-[#0F172A] leading-none">Purchase Orders</h1>
-                    </div>
-                    <p className="text-[15px] text-[#64748B]">Track your wholesale orders, payments, and deliveries.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Purchase Orders</h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
+                        Track your wholesale orders, payments, and deliveries.
+                    </p>
                 </div>
             </div>
 

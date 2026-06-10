@@ -314,23 +314,23 @@ const ManufacturerTransactionsPage = () => {
             </div>
 
             {/* Header Section */}
-            <div className="page-header-enterprise flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-[40px] font-[700] text-[#0F172A] leading-tight tracking-tight">Payments Overview</h1>
-                    <p className="text-[16px] text-[#64748B] mt-2">
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Payments Overview</h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
                         Manage transactions, settlements, and payment records in real time.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={() => fetchTransactions(true)}
-                        className="flex items-center gap-2 px-[20px] py-[12px] bg-white border border-[#E5E7EB] text-[#0F172A] rounded-xl font-semibold hover:bg-slate-50 transition-all shadow-sm"
+                        className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm outline-none"
                     >
                         <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh Data
                     </button>
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-[20px] py-[12px] bg-[#00A878] text-white rounded-xl font-semibold hover:bg-[#009166] transition-all shadow-[0_8px_20px_rgba(0,168,120,0.25)]"
+                        className="flex items-center gap-2 bg-[#00A878] hover:bg-[#0DBB85] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_4px_12px_-4px_rgba(0,200,117,0.4)] hover:shadow-[0_8px_16px_-6px_rgba(0,200,117,0.5)] hover:-translate-y-0.5 outline-none"
                     >
                         <Download size={16} /> Export CSV
                     </button>

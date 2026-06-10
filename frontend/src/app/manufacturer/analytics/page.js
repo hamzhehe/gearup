@@ -14,6 +14,7 @@ import {
     CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
 import { formatPKR, formatPKRShort } from '@/lib/financeUtils';
+import { isChartEligibleSellerOrder, isChartEligiblePurchaseOrder, getSellerSubtotal } from '@/lib/dashboardAnalytics';
 
 function AnalyticsContent() {
     const { user } = useAuth();
@@ -110,9 +111,6 @@ function AnalyticsContent() {
         const currentPurchaseOrders = [];
 
         orders.forEach(o => {
-            const status = (o.status || '').toLowerCase();
-            if (status === 'cancelled' || status === 'refunded') return;
-
             const date = new Date(o.createdAt);
             const buyerId = (o.buyer?._id || o.buyer?.id || o.buyer)?.toString();
             const currentUserId = (user?._id || user?.id)?.toString();
@@ -120,15 +118,11 @@ function AnalyticsContent() {
             
             let amount = 0;
             if (isPurchase) {
+                if (!isChartEligiblePurchaseOrder(o, currentUserId)) return;
                 amount = o.totalAmount || 0;
             } else {
-                const myStats = o.sellerStats?.find(s => (s.seller?._id || s.seller?.id || s.seller)?.toString() === currentUserId);
-                const myItems = o.items?.filter(i => (i.seller?._id || i.seller?.id || i.seller)?.toString() === currentUserId) || [];
-                if (myStats || myItems.length > 0) {
-                    amount = myStats?.subtotal || myItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                } else {
-                    amount = o.totalAmount || 0;
-                }
+                if (!isChartEligibleSellerOrder(o, currentUserId)) return;
+                amount = getSellerSubtotal(o, currentUserId);
             }
 
             if (date >= cutoffDate) {

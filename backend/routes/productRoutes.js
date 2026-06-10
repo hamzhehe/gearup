@@ -6,9 +6,11 @@ const {
     createProduct,
     updateProduct,
     deleteProduct,
-    getInventoryAnalytics
+    getInventoryAnalytics,
+    uploadImage
 } = require('../controllers/productController');
 const { protect, authorize, optionalAuth } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware');
 
 const router = express.Router();
 
@@ -24,6 +26,7 @@ router.get('/analytics/inventory', authorize('manufacturer', 'wholesaler'), getI
 router.use(authorize('manufacturer', 'wholesaler', 'admin'));
 
 router.post('/', createProduct);
+router.post('/upload-image', upload.single('image'), uploadImage);
 router.put('/:id', updateProduct);
 router.delete('/:id', deleteProduct);
 

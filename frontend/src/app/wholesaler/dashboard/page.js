@@ -2,6 +2,7 @@
 
 import { getApiBaseUrl } from '@/lib/api';
 import { isOrderInTimeRange, OPEN_DISPUTE_STATUSES } from '@/lib/dashboardUtils';
+import { isChartEligiblePurchaseOrder } from '@/lib/dashboardAnalytics';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,7 +18,9 @@ import {
     Users,
     CheckCircle2,
     Calendar,
-    Store
+    Store,
+    Package,
+    Activity
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
@@ -130,7 +133,12 @@ export default function WholesalerDashboard() {
     const stats = useMemo(() => {
         const filtered = purchaseOrders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange));
         const activeOrders = filtered.filter((o) => !['delivered', 'cancelled', 'completed'].includes((o.status || '').toLowerCase())).length;
-        const totalSpend = filtered.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const totalSpend = filtered.reduce((sum, o) => {
+            if (isChartEligiblePurchaseOrder(o, uid)) {
+                return sum + (o.totalAmount || 0);
+            }
+            return sum;
+        }, 0);
         const supplierIds = new Set();
         filtered.forEach((o) => {
             (o.items || []).forEach((item) => {
@@ -267,18 +275,114 @@ export default function WholesalerDashboard() {
             .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
             .slice(0, 5)
             .map((o) => {
-                const firstItem = o.items?.[0];
-                const supplier =
-                    firstItem?.seller?.name ||
-                    firstItem?.seller?.businessDetails?.businessName ||
-                    o.manufacturer?.name ||
-                    'Supplier';
-                const qty = (o.items || []).reduce((s, i) => s + (i.quantity || 0), 0);
+                // Resolve supplier name from populated seller objects
+                const firstSeller = o.items?.[0]?.seller;
+                const supplierName =
+                    (typeof firstSeller === 'object' && firstSeller !== null)
+                        ? (firstSeller.businessDetails?.businessName || firstSeller.name)
+                        : null;
+                const mfgName =
+                    (typeof o.manufacturer === 'object' && o.manufacturer !== null)
+                        ? (o.manufacturer.businessDetails?.businessName || o.manufacturer.name)
+                        : null;
+                const sellerStatName = o.sellerStats?.[0]?.seller;
+                const statName =
+                    (typeof sellerStatName === 'object' && sellerStatName !== null)
+                        ? (sellerStatName.businessDetails?.businessName || sellerStatName.name)
+                        : null;
+                const resolvedSupplier = supplierName || mfgName || statName || 'Unknown Supplier';
+
+                // Build descriptive product string from item names
+                const items = o.items || [];
+                let productDisplay;
+                if (items.length === 0) {
+                    productDisplay = '0 Units';
+                } else if (items.length === 1) {
+                    const item = items[0];
+                    const name = item.name || item.product?.name || 'Product';
+                    const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${item.quantity || 1} ${unit})`;
+                } else if (items.length === 2) {
+                    const parts = items.map((item) => {
+                        const name = item.name || item.product?.name || 'Product';
+                        const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                        return `${name} (${item.quantity || 1} ${unit})`;
+                    });
+                    productDisplay = parts.join(', ');
+                } else {
+                    const first = items[0];
+                    const name = first.name || first.product?.name || 'Product';
+                    const unit = first.bulkUnit || first.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${first.quantity || 1} ${unit}) +${items.length - 1} more`;
+                }
+
                 return {
                     id: o._id.slice(-8).toUpperCase(),
                     fullId: o._id,
-                    buyer: supplier,
-                    items: `${qty} Units`,
+                    buyer: resolvedSupplier,
+                    supplier: resolvedSupplier,
+                    items: productDisplay,
+                    amount: o.totalAmount || 0,
+                    status: o.status || 'pending',
+                    date: o.createdAt || new Date()
+                };
+            });
+    }, [purchaseOrders]);
+
+    // Recent Bulk Orders — same purchase orders but formatted for the "Bulk Orders" view
+    // Shows the buyer's name (this wholesaler) and the supplier in a sales-style table
+    const recentBulkOrders = useMemo(() => {
+        if (purchaseOrders.length === 0) return [];
+        return [...purchaseOrders]
+            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+            .slice(0, 5)
+            .map((o) => {
+                // For bulk orders view, show the supplier/seller as the "buyer" column
+                const firstSeller = o.items?.[0]?.seller;
+                const supplierName =
+                    (typeof firstSeller === 'object' && firstSeller !== null)
+                        ? (firstSeller.businessDetails?.businessName || firstSeller.name)
+                        : null;
+                const mfgName =
+                    (typeof o.manufacturer === 'object' && o.manufacturer !== null)
+                        ? (o.manufacturer.businessDetails?.businessName || o.manufacturer.name)
+                        : null;
+                const sellerStatObj = o.sellerStats?.[0]?.seller;
+                const statName =
+                    (typeof sellerStatObj === 'object' && sellerStatObj !== null)
+                        ? (sellerStatObj.businessDetails?.businessName || sellerStatObj.name)
+                        : null;
+                const resolvedSupplier = supplierName || mfgName || statName || 'Unknown Supplier';
+
+                // Build descriptive product string
+                const items = o.items || [];
+                let productDisplay;
+                if (items.length === 0) {
+                    productDisplay = '0 Units';
+                } else if (items.length === 1) {
+                    const item = items[0];
+                    const name = item.name || item.product?.name || 'Product';
+                    const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${item.quantity || 1} ${unit})`;
+                } else if (items.length === 2) {
+                    const parts = items.map((item) => {
+                        const name = item.name || item.product?.name || 'Product';
+                        const unit = item.bulkUnit || item.product?.bulkUnit || 'Units';
+                        return `${name} (${item.quantity || 1} ${unit})`;
+                    });
+                    productDisplay = parts.join(', ');
+                } else {
+                    const first = items[0];
+                    const name = first.name || first.product?.name || 'Product';
+                    const unit = first.bulkUnit || first.product?.bulkUnit || 'Units';
+                    productDisplay = `${name} (${first.quantity || 1} ${unit}) +${items.length - 1} more`;
+                }
+
+                return {
+                    id: o._id.slice(-8).toUpperCase(),
+                    fullId: o._id,
+                    buyer: resolvedSupplier,
+                    items: productDisplay,
                     amount: o.totalAmount || 0,
                     status: o.status || 'pending',
                     date: o.createdAt || new Date()
@@ -381,11 +485,22 @@ export default function WholesalerDashboard() {
                 </section>
             )}
 
-            <section className="flex flex-col space-y-5 pt-8 dashboard-divider">
-                <DashboardSectionHeader
-                    title="Spend & supplier analytics"
-                    subtitle="Track purchase volume and category mix over time"
-                />
+            <section className="flex flex-col space-y-8 pt-8 dashboard-divider">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#E8FFF5] text-[#00A878] shadow-sm">
+                            <Activity size={28} className="stroke-[2.5]" />
+                        </div>
+                        <div>
+                            <h2 className="text-[32px] font-bold text-[#0F172A] tracking-tight leading-tight">
+                                Spend & Supplier Analytics
+                            </h2>
+                            <p className="text-[15px] text-[#64748B] font-medium mt-1">
+                                Track purchase volume and category mix over time
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 w-full items-stretch min-w-0">
                     <div className="xl:col-span-2 min-w-0">
                         <PremiumAnalyticsSection
@@ -414,18 +529,43 @@ export default function WholesalerDashboard() {
                 </div>
             </section>
 
-            <section className="flex flex-col space-y-5 pt-8 dashboard-divider">
-                <DashboardSectionHeader
-                    title="Orders & operations"
-                    subtitle="Recent purchases and fulfillment status"
-                />
-                <div className="w-full min-w-0 overflow-hidden">
+            <section className="flex flex-col space-y-8 pt-8 dashboard-divider">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-[#E8FFF5] text-[#00A878] shadow-sm">
+                            <Package size={28} className="stroke-[2.5]" />
+                        </div>
+                        <div>
+                            <h2 className="text-[32px] font-bold text-[#0F172A] tracking-tight leading-tight">
+                                Orders & Operations
+                            </h2>
+                            <p className="text-[15px] text-[#64748B] font-medium mt-1">
+                                Manage your active transactions and recent operational events
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 gap-6 w-full">
                     <OrdersTable
-                        orders={recentPurchases}
+                        orders={recentBulkOrders}
                         loading={loading || filtering}
-                        variant="purchases"
                         viewAllHref="/wholesaler/orders"
                         onAddCatalogClick={() => router.push('/wholesaler/marketplace')}
+                        emptyTitle="No Active Bulk Orders"
+                        emptyDescription="Browse the marketplace to place your first bulk order."
+                        emptyActionLabel="Browse Marketplace"
+                        partyLabel="Supplier Name"
+                        partySubLabel="Manufacturer"
+                    />
+                    <OrdersTable
+                        orders={recentPurchases}
+                        variant="purchases"
+                        viewAllHref="/wholesaler/orders"
+                        loading={loading || filtering}
+                        onAddCatalogClick={() => router.push('/wholesaler/marketplace')}
+                        emptyTitle="No purchases yet"
+                        emptyDescription="Browse the marketplace to place your first bulk order."
+                        emptyActionLabel="Browse Marketplace"
                     />
                 </div>
             </section>

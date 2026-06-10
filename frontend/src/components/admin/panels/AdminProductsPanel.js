@@ -104,7 +104,15 @@ export default function AdminProductsPanel() {
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F8FAFC] border border-[#E2E8F0] shrink-0">
                         {product.images && product.images[0] ? (
-                          <img src={resolveProductImageUrl(product.images[0])} alt={product.name} className="w-full h-full object-cover" />
+                          <img 
+                            src={resolveProductImageUrl(product.images[0])} 
+                            alt={product.name} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = resolveProductImageUrl(null);
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[#94A3B8] font-bold text-[10px]">NO IMG</div>
                         )}

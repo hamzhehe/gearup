@@ -27,10 +27,26 @@ export function isVerifiedManufacturer(user) {
 
 export function resolveProductImageUrl(image) {
   if (!image) return PRODUCT_PLACEHOLDER;
+  
+  // Handle case where image is an array (e.g. product.images)
+  if (Array.isArray(image)) {
+    if (image.length === 0 || !image[0]) return PRODUCT_PLACEHOLDER;
+    image = image[0];
+  }
+
+  // Handle case where image is an object or invalid type
+  if (typeof image !== 'string') {
+    return PRODUCT_PLACEHOLDER;
+  }
+
   if (image.startsWith('http') || image.startsWith('data:')) return image;
+  
   // Next.js public assets — do not prefix with API origin
   if (image.startsWith('/images/')) return image;
-  return `${getApiBaseUrl()}${image}`;
+  
+  // Ensure the image path starts with a slash before prepending API base URL
+  const separator = image.startsWith('/') ? '' : '/';
+  return `${getApiBaseUrl()}${separator}${image}`;
 }
 
 export function resolveAvatarUrl(avatar) {

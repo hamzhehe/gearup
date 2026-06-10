@@ -182,6 +182,11 @@ exports.updateProduct = async (req, res, next) => {
             updatePayload.packSize = packagingPayload.packSize;
         }
 
+        if (updatePayload.pricePerBulkUnit !== undefined) {
+            updatePayload.price = updatePayload.pricePerBulkUnit;
+            delete updatePayload.pricePerBulkUnit;
+        }
+
         if (updatePayload.sku !== undefined && updatePayload.sku !== null && String(updatePayload.sku).trim()) {
             updatePayload.sku = String(updatePayload.sku).trim().toUpperCase();
             const skuCheck = await assertUniqueProductSku(updatePayload.sku, req.params.id);
@@ -215,6 +220,19 @@ exports.updateProduct = async (req, res, next) => {
 // Delete product
 // DELETE /api/products/:id
 // Private/Seller
+exports.uploadImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    const filePath = `/uploads/${req.file.filename}`;
+    return res.status(201).json({ success: true, path: filePath });
+  } catch (err) {
+    console.error('Upload error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 exports.deleteProduct = async (req, res, next) => {
     try {
         const product = await Product.findById(req.params.id);

@@ -278,6 +278,8 @@ exports.getOrders = async (req, res, next) => {
         const orders = await Order.find(query)
             .populate('buyer', 'name email role businessDetails')
             .populate('items.product', 'name price pricePerBulkUnit bulkUnit images')
+            .populate('items.seller', 'name email businessDetails')
+            .populate('sellerStats.seller', 'name email businessDetails')
             .sort('-createdAt');
 
         console.log(`[getOrders] DEBUG: Fetched raw orders count: ${orders.length}`);

@@ -48,9 +48,10 @@ const DEFAULT_PRIMARY_COVER = '/images/ca-plus-15000-primary-cover.png';
 
 async function uploadProductImageFile(file, token) {
     const payload = new FormData();
-    payload.append('file', file);
+    // Backend expects field name "image"
+    payload.append('image', file);
 
-    const response = await fetch(`${getApiBaseUrl()}/api/upload`, {
+    const response = await fetch(`${getApiBaseUrl()}/api/products/upload-image`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: payload,
@@ -67,7 +68,8 @@ async function uploadProductImageFile(file, token) {
         throw new Error(data.error || 'Image upload failed. Please try again.');
     }
 
-    return data.filePath;
+    // API returns { path: '/uploads/....' }
+    return data.path;
 }
 
 async function normalizeImagesForSave(images, token) {
@@ -809,7 +811,15 @@ const ProductForm = ({ id }) => {
                             {formData.images.length > 0 ? (
                                 <div className="mt-4 max-w-xs">
                                     <div className="relative aspect-[4/3] bg-[#F8FAFC] rounded-[14px] border border-[#E2E8F0] overflow-hidden group hover:shadow-md transition-all duration-200">
-                                        <img src={resolveProductImageUrl(formData.images[0])} alt="Primary cover preview" className="w-full h-full object-cover" />
+                                        <img 
+                                            src={resolveProductImageUrl(formData.images[0])} 
+                                            alt="Primary cover preview" 
+                                            className="w-full h-full object-cover" 
+                                            onError={(e) => {
+                                                e.currentTarget.onerror = null;
+                                                e.currentTarget.src = resolveProductImageUrl(null);
+                                            }}
+                                        />
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveImage(0)}
@@ -847,7 +857,15 @@ const ProductForm = ({ id }) => {
 
                         <div className="aspect-[4/3] rounded-[16px] bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden relative flex items-center justify-center text-[#CBD5E1]">
                             {formData.images.length > 0 ? (
-                                <img src={resolveProductImageUrl(formData.images[0])} alt="Live Preview representation" className="w-full h-full object-contain p-4" />
+                                <img 
+                                    src={resolveProductImageUrl(formData.images[0])} 
+                                    alt="Live Preview representation" 
+                                    className="w-full h-full object-contain p-4" 
+                                    onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src = resolveProductImageUrl(null);
+                                    }}
+                                />
                             ) : (
                                 <div className="flex flex-col items-center gap-2 opacity-50">
                                     <ImageIcon size={40} className="text-[#CBD5E1]" />

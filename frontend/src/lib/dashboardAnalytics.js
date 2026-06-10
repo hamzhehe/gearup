@@ -6,9 +6,13 @@ export const COMPLETED_SALE_STATUSES = new Set(['delivered', 'completed']);
 export const CHART_ELIGIBLE_STATUSES = new Set([
     'processing',
     'confirmed',
+    'order confirmed',
     'shipped',
     'delivered',
     'completed',
+    'verified',
+    'payment verified',
+    'accepted'
 ]);
 
 export const EXCLUDED_CHART_STATUSES = new Set([

@@ -1,5 +1,7 @@
 "use client";
 
+import React, { useState, useEffect, useMemo } from 'react';
+import { getApiBaseUrl } from '@/lib/api';
 import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -234,13 +236,12 @@ const WholesalerCartPage = () => {
     return (
         <div className="space-y-8 pb-10 min-h-[calc(100vh-160px)]">
             {/* Header with Continue Shopping outline button */}
-            <div className="page-header-enterprise flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-3">
-                        <ShoppingCart className="text-[#00A878]" size={32} />
-                        <h1 className="text-[32px] font-[800] text-[#0F172A] leading-none">Your Cart</h1>
-                    </div>
-                    <p className="text-[15px] text-[#64748B]">Review your wholesale order before checkout.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Your Cart</h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
+                        Review your wholesale order before checkout.
+                    </p>
                 </div>
                 <div className="flex justify-center sm:justify-end">
                     <Link

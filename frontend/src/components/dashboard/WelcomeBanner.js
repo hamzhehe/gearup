@@ -194,7 +194,7 @@ const WelcomeBanner = ({
         </div>
 
         {/* Heading */}
-        <h1 className="text-[32px] sm:text-[36px] lg:text-[44px] font-[800] text-white tracking-tight leading-tight mb-3 whitespace-nowrap" style={{ maxWidth: '600px' }}>
+        <h1 className="font-[800] text-white tracking-tight leading-tight mb-3 break-words" style={{ fontSize: 'clamp(28px, 4vw, 44px)', maxWidth: '100%', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
           {greeting}, {displayName} 👋
         </h1>
 

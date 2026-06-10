@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import NotificationBell from '../NotificationBell';
 import UserAvatar from '@/components/ui/UserAvatar';
+import ChatNotificationBadge from '@/components/shared/ChatNotificationBadge';
 
 const Topbar = ({
   onToggleSidebar,
@@ -124,15 +125,15 @@ const Topbar = ({
             <>
               <Link
                 href={user?.role === 'wholesaler' ? '/wholesaler/chats' : '/manufacturer/chats'}
-                className="icon-wrapper"
+                className="icon-wrapper relative"
               >
                 <MessageSquare size={20} />
-                <span className="badge-class">5</span>
+                <ChatNotificationBadge />
               </Link>
-              <Link href="/wholesaler/cart" className="icon-wrapper">
+              <Link href="/wholesaler/cart" className="icon-wrapper relative">
                 <ShoppingCart size={20} />
                 {cartCount > 0 && (
-                  <span className="badge-class">{cartCount > 99 ? '99+' : cartCount}</span>
+                  <span className={badgeClass}>{cartCount > 99 ? '99+' : cartCount}</span>
                 )}
               </Link>
             </>

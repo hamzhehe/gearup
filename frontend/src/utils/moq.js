@@ -25,22 +25,22 @@ export function formatMoqDisplay(moq, bulkUnit = 'Unit', packSize = DOZEN_UNITS_
     const qty = Math.max(1, Number(moq) || 1);
     const unit = bulkUnit || 'Unit';
 
-    if (unit === 'Dozen') {
-        const unitsPerDozen = Number(packSize) || DOZEN_UNITS_PER_PACK;
-        const dozenText = qty === 1 ? '1 Dozen' : `${qty} Dozens`;
-        const totalUnits = qty * unitsPerDozen;
-        return {
-            primary: dozenText,
-            secondary: `(${totalUnits} Units)`,
-            compact: dozenText,
-        };
-    }
-
     const unitLabel = pluralizeBulkUnit(unit, qty);
     const primary = `${qty} ${unitLabel}`;
+    let secondary = null;
+    
+    if (unit !== 'Unit') {
+        let effectivePackSize = Number(packSize) || 1;
+        if (unit === 'Dozen' && effectivePackSize === 1) {
+            effectivePackSize = DOZEN_UNITS_PER_PACK;
+        }
+        const totalUnits = qty * effectivePackSize;
+        secondary = `(${totalUnits} Units)`;
+    }
+
     return {
         primary,
-        secondary: null,
+        secondary,
         compact: primary,
     };
 }

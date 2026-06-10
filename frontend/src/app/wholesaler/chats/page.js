@@ -87,12 +87,11 @@ export default function WholesalerChatsPage() {
 
     return (
         <div className="max-w-6xl mx-auto px-4 mt-6 pb-12 font-sans text-[#0F172A]">
-            <div className="page-header-enterprise flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-6">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-[30px] font-[800] text-[#0F172A] leading-tight tracking-tight flex items-center gap-3">
-                        <Handshake className="text-[#00A878]" size={32} /> Marketplace Chats
-                    </h1>
-                    <p className="text-[16px] text-[#64748B] mt-2">
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Marketplace Chats</h1>
+                    <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
                         Secure direct wholesale messaging and bulk deal settlement hub.
                     </p>
                 </div>

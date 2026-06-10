@@ -16,10 +16,12 @@ const OrdersTable = ({
   purchaseViewAllHref = '/manufacturer/purchases',
   emptyTitle,
   emptyDescription,
-  emptyActionLabel
+  emptyActionLabel,
+  partyLabel,
+  partySubLabel
 }) => {
   const isPurchases = variant === 'purchases';
-  const partyColumnLabel = isPurchases ? 'Supplier' : 'Buyer Name';
+  const partyColumnLabel = partyLabel || (isPurchases ? 'Supplier' : 'Buyer Name');
   const cardTitle = isPurchases ? 'Recent Purchases' : 'Recent Bulk Orders';
   const cardSubtitle = isPurchases
     ? 'Your latest procurement orders and delivery status'
@@ -194,7 +196,7 @@ const OrdersTable = ({
                             {isPurchases ? (order.supplier || order.buyer) : order.buyer}
                             </span>
                             <span className="text-[11px] font-medium text-[#64748B]">
-                                {isPurchases ? 'Supplier' : 'Wholesaler'}
+                                {partySubLabel || (isPurchases ? 'Manufacturer' : 'Wholesaler')}
                             </span>
                         </div>
                       </div>

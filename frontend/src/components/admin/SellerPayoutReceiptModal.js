@@ -113,13 +113,13 @@ export default function SellerPayoutReceiptModal({ payout, onClose }) {
             </SectionCard>
           </div>
 
-          <SectionCard title="Settlement Timeline" icon={Clock}>
+          <SectionCard title="Payment Timeline" icon={Clock}>
             <ol className="space-y-3">
               <TimelineStep done label="Payout Created" at={payout.createdAt} />
               <TimelineStep
                 done={resolvedStatus === PAYOUT_STATUS.APPROVED}
                 pending={resolvedStatus === PAYOUT_STATUS.HOLDING}
-                label="Automatic Settlement"
+                label="Instant Payouts"
                 at={payout.paymentDate}
               />
               <TimelineStep
