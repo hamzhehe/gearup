@@ -10,6 +10,7 @@ import {
   MapPin,
   Calendar,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { formatPKR } from '@/lib/financeUtils';
 import { getApiBaseUrl } from '@/lib/api';
@@ -22,6 +23,7 @@ export default function SponsoredProductCard({
   onRequestQuote,
   onView,
   compact = false,
+  isPremium = false,
 }) {
   const imageUrl = product.image?.startsWith('http')
     ? product.image
@@ -48,18 +50,32 @@ export default function SponsoredProductCard({
 
   return (
     <article
-      className={`relative h-full flex flex-col rounded-2xl border border-[#E5E7EB] bg-white overflow-hidden transition-all duration-300 ease-out shadow-[0_4px_20px_rgba(11,31,58,0.06)] hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(11,31,58,0.12),0_0_0_1px_rgba(0,200,150,0.25)] hover:border-[#00C896]/50 group ${compact ? '' : ''}`}
+      className={`relative h-full flex flex-col rounded-2xl bg-white overflow-hidden transition-all duration-300 ease-out group ${
+        isPremium
+          ? 'border border-slate-200 shadow-lg hover:shadow-2xl hover:-translate-y-1'
+          : 'border border-slate-200 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+      } ${compact ? '' : ''}`}
     >
-      {/* Sponsored badge */}
-      <div className="absolute top-3 left-3 z-20">
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-[0_2px_12px_rgba(0,200,150,0.45)] bg-gradient-to-r from-[#0B1F3A] via-[#0d3d5c] to-[#00C896] border border-white/10">
-          ⭐ Sponsored Listing
+      {/* Sponsored/Featured badge */}
+      <div className="absolute top-4 left-4 z-20">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+          isPremium
+            ? 'bg-slate-900 text-white shadow-md'
+            : 'bg-white text-slate-700 border border-slate-200 shadow-sm'
+        }`}>
+          {isPremium ? (
+            <><Sparkles size={12} className="text-emerald-400" /> Featured</>
+          ) : (
+            <><Package size={12} className="text-slate-400" /> Sponsored</>
+          )}
         </span>
       </div>
 
       {/* Product image */}
-      <div className="relative h-[200px] sm:h-[220px] bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] border-b border-[#E5E7EB] overflow-hidden">
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-white/0 via-white/25 to-white/0 pointer-events-none z-[1]" />
+      <div className={`relative bg-slate-50 border-b border-slate-100 overflow-hidden ${
+        isPremium ? 'h-[240px] sm:h-[280px]' : 'h-[200px] sm:h-[220px]'
+      }`}>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-black/5 pointer-events-none z-[1]" />
         <div className="absolute inset-0 flex items-center justify-center p-6">
           {isVideo ? (
             <video
@@ -86,65 +102,73 @@ export default function SponsoredProductCard({
         )}
       </div>
 
-      <div className="p-4 sm:p-5 flex flex-col flex-1">
-        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#64748B] mb-1.5">
+      <div className={`flex flex-col flex-1 ${isPremium ? 'p-6 sm:p-8' : 'p-4 sm:p-5'}`}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
           {product.category}
         </p>
-        <h3 className="font-bold text-[#0B1F3A] text-[15px] leading-snug line-clamp-2 group-hover:text-[#00C896] transition-colors min-h-[40px]">
+        <h3 className={`font-bold text-slate-900 leading-snug line-clamp-2 transition-colors min-h-[44px] ${
+          isPremium ? 'text-lg group-hover:text-emerald-600' : 'text-[15px] group-hover:text-emerald-600'
+        }`}>
           {product.name}
         </h3>
 
         {/* Manufacturer */}
-        <div className="mt-3 pt-3 border-t border-[#F1F5F9] space-y-1.5">
+        <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-[#0B1F3A] text-xs truncate">{product.supplier}</span>
+            <span className="font-bold text-slate-900 text-sm truncate">{product.supplier}</span>
             {product.verified && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-[#E8FFF5] text-[#00A878] text-[8px] font-black uppercase tracking-wider border border-[#00C896]/20">
-                <CheckCircle size={9} /> Verified
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-wider border border-emerald-100">
+                <CheckCircle size={10} /> Verified
               </span>
             )}
           </div>
-          <p className="flex items-center gap-1 text-[10px] text-[#64748B] font-semibold">
-            <MapPin size={11} className="text-[#94A3B8] shrink-0" />
+          <p className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <MapPin size={14} className="text-slate-400 shrink-0" />
             {product.location || product.country}
           </p>
           {memberSince && (
-            <p className="flex items-center gap-1 text-[10px] text-[#94A3B8] font-semibold">
-              <Calendar size={11} className="shrink-0" />
+            <p className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+              <Calendar size={14} className="text-slate-400 shrink-0" />
               Member since {memberSince}
             </p>
           )}
         </div>
 
-        {/* Price — primary visual */}
-        <div className="mt-4 py-3 px-3 rounded-xl bg-[#FAFBFC] border border-[#E5E7EB]">
-          <p className="text-[22px] sm:text-2xl font-black text-[#00C896] leading-none tracking-tight tabular-nums">
+        {/* Price */}
+        <div className={`mt-5 py-4 px-4 rounded-xl ${
+          isPremium ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+        } border`}>
+          <p className={`font-black leading-none tracking-tight tabular-nums ${
+            isPremium ? 'text-2xl sm:text-3xl text-white' : 'text-[22px] sm:text-2xl text-emerald-600'
+          }`}>
             {formatPKR(product.price)}
           </p>
-          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#64748B] mt-1.5">
+          <p className={`text-[10px] font-black uppercase tracking-widest mt-2 ${
+            isPremium ? 'text-slate-400' : 'text-slate-500'
+          }`}>
             Bulk Trade Pricing
           </p>
         </div>
 
         {/* MOQ chip */}
-        <div className="mt-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0B1F3A]/5 border border-[#0B1F3A]/10 text-[11px] font-bold text-[#0B1F3A]">
+        <div className="mt-4">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">
             📦 MOQ: {moqLabel.compact}
           </span>
           {moqLabel.secondary && (
-            <p className="text-[10px] text-[#64748B] font-semibold mt-1 ml-1">{moqLabel.secondary}</p>
+            <p className="text-xs text-slate-500 font-medium mt-1.5 ml-1">{moqLabel.secondary}</p>
           )}
         </div>
 
         {/* Trust indicators */}
         {trustBadges.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className="flex flex-wrap gap-2 mt-4">
             {trustBadges.map((label) => (
               <span
                 key={label}
-                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md bg-white border border-[#E5E7EB] text-[8px] font-bold uppercase tracking-wide text-[#64748B]"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[9px] font-bold uppercase tracking-wider text-slate-500 shadow-sm"
               >
-                <ShieldCheck size={9} className="text-[#00C896]" />
+                <ShieldCheck size={12} className="text-emerald-500" />
                 {label}
               </span>
             ))}
@@ -152,39 +176,39 @@ export default function SponsoredProductCard({
         )}
 
         {/* Actions */}
-        <div className="mt-4 pt-4 border-t border-[#F1F5F9] space-y-2 mt-auto">
+        <div className="mt-6 pt-5 border-t border-slate-100 space-y-3 mt-auto">
           <Link
             href={`/wholesaler/marketplace/product/${product.id}`}
             onClick={() => onView?.(product)}
-            className="flex w-full items-center justify-center h-11 rounded-xl bg-[#0B1F3A] hover:bg-[#0d2847] text-white text-xs font-black uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(11,31,58,0.2)] hover:shadow-[0_6px_18px_rgba(11,31,58,0.28)]"
+            className="flex w-full items-center justify-center h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg"
           >
             View Details
           </Link>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={() => onRequestQuote?.(product)}
-              className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl border-2 border-[#E5E7EB] bg-white hover:border-[#00C896] hover:bg-[#F8FFFC] text-[#0B1F3A] hover:text-[#00C896] text-[10px] font-black uppercase tracking-wider transition-all"
+              className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
               title="Message Supplier"
             >
-              <MessageCircle size={15} />
-              Message Supplier
+              <MessageCircle size={16} />
+              Message
             </button>
             <button
               type="button"
               onClick={() => onAddToCart?.(product)}
-              className="flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-[#00C896] hover:bg-[#00b085] text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(0,200,150,0.35)] hover:shadow-[0_6px_18px_rgba(0,200,150,0.45)] shrink-0"
+              className="flex items-center justify-center gap-2 h-12 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg shrink-0"
               title="Add to Cart"
             >
-              <ShoppingCart size={15} />
-              Add to Cart
+              <ShoppingCart size={16} />
+              Add
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <p className="mt-4 pt-3 border-t border-[#F1F5F9] text-[9px] text-center text-[#94A3B8] font-semibold tracking-wide">
-          Promoted through GearUp Advertising Network
+        <p className="mt-5 pt-4 border-t border-slate-100 text-[10px] text-center text-slate-400 font-semibold tracking-wider uppercase">
+          Promoted on GearUp
         </p>
       </div>
     </article>

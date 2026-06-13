@@ -69,7 +69,7 @@ exports.getProducts = async (req, res, next) => {
             const [total, docs] = await Promise.all([
                 Product.countDocuments(query),
                 Product.find(query)
-                    .populate('manufacturer', 'name businessDetails')
+                    .populate('manufacturer', 'name businessDetails role')
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
@@ -83,7 +83,7 @@ exports.getProducts = async (req, res, next) => {
             };
         } else {
             products = await Product.find(query)
-                .populate('manufacturer', 'name businessDetails')
+                .populate('manufacturer', 'name businessDetails role')
                 .sort({ createdAt: -1 });
         }
 
@@ -106,7 +106,7 @@ exports.getProduct = async (req, res, next) => {
             return res.status(400).json({ success: false, error: 'Invalid product id' });
         }
 
-        const product = await Product.findById(req.params.id).populate('manufacturer', 'name businessDetails');
+        const product = await Product.findById(req.params.id).populate('manufacturer', 'name businessDetails role');
 
         if (!product) {
             return res.status(404).json({ success: false, error: 'Product not found' });

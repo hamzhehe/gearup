@@ -245,12 +245,19 @@ const MarketplacePage = ({ isDashboard = true }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [chatOpeningId, setChatOpeningId] = useState(null);
-    const [sponsoredProductIds, setSponsoredProductIds] = useState(new Set());
     const [categoryOptions, setCategoryOptions] = useState([]);
+    const [sponsoredAds, setSponsoredAds] = useState([]);
+    const [sponsoredProductIds, setSponsoredProductIds] = useState(new Set());
 
     useEffect(() => {
         fetchMarketplaceCategories()
-            .then((categories) => setCategoryOptions(categories))
+            .then((categories) => {
+                const filtered = categories.filter(c => {
+                    const lc = String(c || '').toLowerCase();
+                    return !lc.includes('apparel') && !lc.includes('accessories');
+                });
+                setCategoryOptions(filtered);
+            })
             .catch(() => setCategoryOptions([]));
     }, []);
 
@@ -260,13 +267,19 @@ const MarketplacePage = ({ isDashboard = true }) => {
             category: filters.industry,
             keyword: filters.searchQuery || '',
             limit: 12,
+            placement: 'sponsored_product'
         };
         fetchSponsoredProducts(params)
             .then((res) => {
-                const ids = new Set((res.data || []).map((item) => String(item.productId?._id || item.product?._id || item.productId)));
+                const ads = (res.data || []).map(mapSponsoredItem);
+                setSponsoredAds(ads);
+                const ids = new Set(ads.map((item) => String(item.id)));
                 setSponsoredProductIds(ids);
             })
-            .catch(() => setSponsoredProductIds(new Set()));
+            .catch(() => {
+                setSponsoredAds([]);
+                setSponsoredProductIds(new Set());
+            });
     }, [filters.industry, filters.searchQuery]);
 
     const fetchProducts = useCallback(async () => {
@@ -308,7 +321,8 @@ const MarketplacePage = ({ isDashboard = true }) => {
                             packSize: normalizeLoadedPackSize(p.bulkUnit || 'Dozen', p.packSize) || 12,
                             stock: p.stock || 0,
                             industry: (p.category || 'sports').toLowerCase(),
-                            verified: seller?.businessDetails?.isVerified || seller?.verificationStatus === 'approved' || seller?.verificationStatus === 'verified' || false
+                            verified: seller?.businessDetails?.isVerified || seller?.verificationStatus === 'approved' || seller?.verificationStatus === 'verified' || false,
+                            sellerRole: seller?.role || 'manufacturer'
                         };
                     })
                     .filter((product) => !viewerId || String(product.sellerId || '') !== viewerId);
@@ -415,10 +429,32 @@ const MarketplacePage = ({ isDashboard = true }) => {
         return list;
     }, [sortBy, sponsoredProductIds]);
 
-    const sortedProducts = useMemo(
-        () => sortProductList(applyProductFilters(products)),
-        [products, applyProductFilters, sortProductList]
-    );
+    const sortedProducts = useMemo(() => {
+        const list = sortProductList(applyProductFilters(products));
+        if (sponsoredAds.length > 0) {
+            const merged = [];
+            let adIndex = 0;
+            // Always put the first sponsored ad at the very top of the marketplace
+            if (sponsoredAds.length > 0) {
+                merged.push(sponsoredAds[adIndex]);
+                adIndex++;
+            }
+            for (let i = 0; i < list.length; i++) {
+                merged.push(list[i]);
+                // Inject subsequent ads every 4th spot
+                if (i > 0 && i % 4 === 0 && adIndex < sponsoredAds.length) {
+                    merged.push(sponsoredAds[adIndex]);
+                    adIndex++;
+                }
+            }
+            while (adIndex < sponsoredAds.length) {
+                merged.push(sponsoredAds[adIndex]);
+                adIndex++;
+            }
+            return merged;
+        }
+        return list;
+    }, [products, applyProductFilters, sortProductList, sponsoredAds]);
 
     const totalProducts = products.length;
     const verifiedSuppliersCount = new Set(products.filter(p => p.verified).map(p => p.supplier)).size;
@@ -461,20 +497,6 @@ const MarketplacePage = ({ isDashboard = true }) => {
                     </div>
                 </div>
             </div>
-
-            {/* SECTION 3: Sponsored Products Highlights */}
-            {isAdvertisementSystemEnabled && (
-                <div className="w-full">
-                    <SponsoredProducts
-                        category={filters.industry}
-                        keyword={filters.searchQuery}
-                        limit={filters.searchQuery ? 4 : 6}
-                        placement={filters.searchQuery ? 'search_results' : filters.industry !== 'all' ? 'category' : 'marketplace'}
-                        onAddToCartClick={handleAddToCart}
-                        onInquiryClick={(prod) => handleChatWithSeller(prod)}
-                    />
-                </div>
-            )}
 
             {/* Combined Search + Filters Row */}
             <div className="filter-bar-enterprise flex flex-wrap items-center gap-4">
@@ -577,14 +599,19 @@ const MarketplacePage = ({ isDashboard = true }) => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {sortedProducts.map((product) => (
-                    <div key={product.id} className="product-card-enterprise h-full group">
+                    <div key={product.id} className={`product-card-enterprise h-full group relative overflow-hidden transition-all duration-300 ${product.sponsored ? 'border-[1.5px] border-amber-400/60 shadow-[0_0_20px_rgba(251,191,36,0.15)] hover:shadow-[0_0_30px_rgba(251,191,36,0.3)] hover:-translate-y-1 bg-gradient-to-b from-amber-50/30 to-white' : ''}`}>
+                        {/* Subtle background glow for sponsored */}
+                        {product.sponsored && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent pointer-events-none z-0" />
+                        )}
+
                         {/* Fixed Visual Asset System */}
-                        <div className="product-image-wrapper border-b border-[#E5E7EB] p-4">
+                        <div className={`product-image-wrapper border-b p-4 relative z-10 ${product.sponsored ? 'border-amber-200/50' : 'border-[#E5E7EB]'}`}>
                             {product.image ? (
                                 <img
                                     src={product.image}
                                     alt={product.name}
-                                    className="w-full h-full object-contain mix-blend-multiply"
+                                    className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm group-hover:scale-105 transition-transform duration-500"
                                     onError={(e) => {
                                         e.currentTarget.onerror = null;
                                         e.currentTarget.src = resolveProductImageUrl(null);
@@ -604,22 +631,28 @@ const MarketplacePage = ({ isDashboard = true }) => {
                                     </div>
                                 ) : (
                                     <div className="px-2.5 py-1 bg-[#64748B] text-[#FFFFFF] rounded-full text-[10px] font-[700] uppercase tracking-widest shadow-sm">
-                                        Supplier
+                                        {product.sellerRole === 'wholesaler' ? 'Wholesaler' : 'Manufacturer'}
                                     </div>
                                 )}
                             </div>
 
-                            <div className="absolute top-3 right-3 z-10">
-                                <div className="px-2.5 py-1 bg-[#FFFFFF]/95 backdrop-blur-sm text-[#0F172A] border border-[#E5E7EB] rounded-full text-[10px] font-[700] uppercase tracking-widest shadow-sm">
+                            <div className="absolute top-3 right-3 z-10 flex gap-2">
+                                {product.sponsored && (
+                                    <div className="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_4px_10px_rgba(245,158,11,0.3)] flex items-center gap-1 border border-amber-400/50">
+                                        <Sparkles size={12} className="text-amber-100" />
+                                        Sponsored
+                                    </div>
+                                )}
+                                <div className={`px-2.5 py-1 backdrop-blur-sm rounded-full text-[10px] font-[700] uppercase tracking-widest shadow-sm ${product.sponsored ? 'bg-amber-100/90 text-amber-900 border border-amber-200' : 'bg-[#FFFFFF]/95 text-[#0F172A] border border-[#E5E7EB]'}`}>
                                     {product.industry}
                                 </div>
                             </div>
                         </div>
 
                         {/* Data Points */}
-                        <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div className="p-5 flex-1 flex flex-col justify-between relative z-10">
                             <div>
-                                <h3 className="font-sans text-[16px] font-[700] text-[#0F172A] group-hover:text-[#00A878] transition-colors line-clamp-2 min-h-[48px] mb-3 leading-snug" title={product.name}>
+                                <h3 className={`font-sans text-[16px] font-[700] transition-colors line-clamp-2 min-h-[48px] mb-3 leading-snug ${product.sponsored ? 'text-amber-950 group-hover:text-amber-600' : 'text-[#0F172A] group-hover:text-[#00A878]'}`} title={product.name}>
                                     {product.name}
                                 </h3>
                                 <div className="flex flex-col gap-2 text-[#64748B] font-sans font-[500] text-[12px]">
@@ -633,10 +666,10 @@ const MarketplacePage = ({ isDashboard = true }) => {
                             </div>
 
                             {/* Price / MOQ splitting divider grid */}
-                            <div className="grid grid-cols-2 gap-4 py-4 border-y border-[#F1F5F9] my-5 shrink-0">
+                            <div className={`grid grid-cols-2 gap-4 py-4 border-y my-5 shrink-0 ${product.sponsored ? 'border-amber-100/60' : 'border-[#F1F5F9]'}`}>
                                 <div>
-                                    <div className="font-sans text-[10px] font-[700] text-[#94A3B8] uppercase tracking-widest mb-1">Price Per {product.bulkUnit}</div>
-                                    <div className="font-sans font-[800] text-[#00A878] text-[18px]">PKR {product.price.toLocaleString()}</div>
+                                    <div className={`font-sans text-[10px] font-[700] uppercase tracking-widest mb-1 ${product.sponsored ? 'text-amber-700/70' : 'text-[#94A3B8]'}`}>Price Per {product.bulkUnit}</div>
+                                    <div className={`font-sans font-[800] text-[18px] ${product.sponsored ? 'text-amber-600' : 'text-[#00A878]'}`}>PKR {product.price.toLocaleString()}</div>
                                 </div>
                                 <div>
                                     <div className="font-sans text-[10px] font-[700] text-[#94A3B8] uppercase tracking-widest mb-1">Min Order</div>

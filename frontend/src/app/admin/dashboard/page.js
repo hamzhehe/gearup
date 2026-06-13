@@ -65,6 +65,22 @@ function AdminDashboardContent() {
 
   const metrics = overviewMetrics || {};
 
+  const dynamicAlerts = [];
+  if (metrics.pendingBusinessVerifications > 0) {
+    dynamicAlerts.push({ message: `${metrics.pendingBusinessVerifications} verification request${metrics.pendingBusinessVerifications > 1 ? 's' : ''} waiting 48+ hours`, tone: 'amber' });
+  }
+  if (metrics.pendingPayouts > 0) {
+    dynamicAlerts.push({ message: `${metrics.pendingPayouts} payout${metrics.pendingPayouts > 1 ? 's' : ''} pending 3+ days`, tone: 'amber' });
+  }
+  if (metrics.pendingPaymentReviews > 0) {
+    dynamicAlerts.push({ message: `${metrics.pendingPaymentReviews} escrow payment review${metrics.pendingPaymentReviews > 1 ? 's' : ''} pending`, tone: 'rose' });
+  }
+
+  const finalMetrics = {
+    ...metrics,
+    priorityAlerts: metrics.priorityAlerts?.length > 0 ? metrics.priorityAlerts : dynamicAlerts
+  };
+
   return (
     <div className="w-full min-w-0 animate-in fade-in duration-300 slide-in-from-bottom-2">
       <div className="max-w-[1280px] mx-auto space-y-16">
@@ -107,10 +123,11 @@ function AdminDashboardContent() {
 
                   <div className="flex flex-wrap items-center gap-3">
                     {[
-                      { label: 'Pending Actions', count: (metrics.pendingBusinessVerifications || 0) + (metrics.pendingPaymentReviews || 0) + (metrics.pendingPayouts || 0) + (metrics.activeDisputes || 0), type: 'danger' },
+                      { label: 'Pending Actions', count: (metrics.pendingBusinessVerifications || 0) + (metrics.pendingPaymentReviews || 0) + (metrics.pendingPayouts || 0) + (metrics.activeDisputes || 0) + (metrics.pendingAdvertisements || 0), type: 'danger' },
                       { label: 'Payment Reviews', count: metrics.pendingPaymentReviews || 0, type: 'warning' },
                       { label: 'Verifications', count: metrics.pendingBusinessVerifications || 0, type: 'warning' },
-                      { label: 'Payout Requests', count: metrics.pendingPayouts || 0, type: 'warning' }
+                      { label: 'Payout Requests', count: metrics.pendingPayouts || 0, type: 'warning' },
+                      { label: 'Ad Approvals', count: metrics.pendingAdvertisements || 0, type: 'warning' }
                     ].map((badge, idx) => (
                       <AnimatedBadge key={idx} badge={badge} idx={idx} />
                     ))}
@@ -132,7 +149,7 @@ function AdminDashboardContent() {
           </div>
         </section>
 
-        <AdminOverviewCommandCenter metrics={metrics} />
+        <AdminOverviewCommandCenter metrics={finalMetrics} />
       </div>
     </div>
   );

@@ -32,7 +32,7 @@ export default function CreateAdvertisementPage() {
     productId: '',
     campaignType: 'sponsored_product',
     plan: 'starter',
-    dailyBudget: '',
+    description: '',
     startDate: getTodayDateInput(),
     customMedia: '',
   });
@@ -112,7 +112,7 @@ export default function CreateAdvertisementPage() {
         productId: form.productId,
         campaignType: form.campaignType,
         plan: form.plan,
-        dailyBudget: form.dailyBudget ? Number(form.dailyBudget) : null,
+        description: form.description,
         startDate: form.startDate,
         endDate,
         submitForPayment: true,
@@ -147,14 +147,14 @@ export default function CreateAdvertisementPage() {
                 )}
 
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">Product</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">Product to Promote</label>
                   <select
                     value={form.productId}
                     onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
-                    className="w-full h-11 px-4 border border-[#E5E7EB] rounded-xl text-sm font-semibold"
+                    className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all shadow-sm appearance-none cursor-pointer"
                     required
                   >
-                    <option value="">Select your product</option>
+                    <option value="" disabled>Select your product</option>
                     {products.map((p) => (
                       <option key={p._id} value={p._id}>{p.name} — {p.category}</option>
                     ))}
@@ -162,29 +162,32 @@ export default function CreateAdvertisementPage() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">Campaign Type</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">Campaign Type</label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {CAMPAIGN_TYPES.map((type) => (
                       <button
                         key={type.value}
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, campaignType: type.value }))}
-                        className={`p-3 rounded-xl border text-left text-sm font-bold transition-all ${
+                        className={`p-4 rounded-xl border-2 text-left text-sm font-bold transition-all relative ${
                           form.campaignType === type.value
-                            ? 'border-[#00A878] bg-[#E8FFF5] text-[#0F172A]'
-                            : 'border-[#E5E7EB] text-[#64748B] hover:border-[#CBD5E1]'
+                            ? 'border-slate-900 bg-slate-50 text-slate-900 shadow-sm'
+                            : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white hover:bg-slate-50'
                         }`}
                       >
                         {type.label}
+                        {form.campaignType === type.value && (
+                          <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-slate-900"></div>
+                        )}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {form.campaignType === 'homepage_featured' && (
-                  <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">
-                      Custom Homepage Media (Optional)
+                  <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                      Custom Homepage Media <span className="normal-case font-medium text-slate-400">(Optional)</span>
                     </label>
                     <div className="flex items-center gap-4">
                       <input
@@ -215,62 +218,69 @@ export default function CreateAdvertisementPage() {
                             setUploadingMedia(false);
                           }
                         }}
-                        className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#E8FFF5] file:text-[#00A878] hover:file:bg-[#D1FBEA]"
+                        className="text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 file:cursor-pointer cursor-pointer transition-colors"
                       />
-                      {uploadingMedia && <span className="text-xs text-[#00A878] font-bold">Uploading...</span>}
+                      {uploadingMedia && <span className="text-xs text-slate-500 font-bold flex items-center gap-2"><div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> Uploading...</span>}
                     </div>
                     {form.customMedia && (
-                      <p className="text-xs text-emerald-600 mt-2 font-semibold flex items-center gap-1">
-                        <Sparkles size={12} /> Media uploaded successfully!
+                      <p className="text-xs text-emerald-600 mt-3 font-semibold flex items-center gap-1.5 bg-emerald-50 w-fit px-3 py-1.5 rounded-lg border border-emerald-100">
+                        <Sparkles size={12} /> Media uploaded successfully
                       </p>
                     )}
-                    <p className="text-[10px] text-[#94A3B8] mt-1.5 leading-relaxed">
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">
                       Stand out on the homepage with a custom banner image or video (Max 50MB). If not provided, your product image will be used.
                     </p>
                   </div>
                 )}
 
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">Advertisement Plan</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-3">Advertisement Package</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {plans.map((plan) => (
                       <button
                         key={plan.slug}
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, plan: plan.slug }))}
-                        className={`p-4 rounded-xl border text-left transition-all ${
+                        className={`p-5 rounded-2xl border-2 text-left transition-all relative overflow-hidden ${
                           form.plan === plan.slug
-                            ? 'border-[#00A878] bg-[#E8FFF5] shadow-sm'
-                            : 'border-[#E5E7EB] hover:border-[#CBD5E1]'
+                            ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-4 ring-emerald-500/10'
+                            : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/50'
                         }`}
                       >
-                        <div className="flex items-center gap-2 mb-1">
-                          <Sparkles size={14} className="text-[#00A878]" />
-                          <span className="font-black text-sm text-[#0F172A]">{plan.name}</span>
-                        </div>
-                        <p className="text-xs text-[#64748B]">{plan.durationDays || plan.duration} days · {plan.visibilityTier} visibility</p>
-                        {plan.discountPercent > 0 ? (
-                          <div className="mt-2 space-y-1">
-                            <p className="text-xs text-[#94A3B8] line-through">{formatPKR(plan.originalPrice ?? plan.price)}</p>
-                            <p className="text-sm font-black text-[#00A878]">{formatPKR(plan.finalPrice ?? plan.price)}</p>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-black uppercase">
-                              <Tag size={10} /> {plan.discountPercent}% OFF · Save {formatPKR(plan.savings || 0)}
-                            </span>
-                            {plan.discountName && (
-                              <p className="text-[10px] font-bold text-[#64748B]">{plan.discountName}</p>
-                            )}
+                        {form.plan === plan.slug && (
+                          <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-bl-lg">
+                            Selected
                           </div>
-                        ) : (
-                          <p className="text-sm font-black text-[#00A878] mt-2">{formatPKR(plan.price)}</p>
                         )}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles size={16} className={form.plan === plan.slug ? 'text-emerald-500' : 'text-slate-400'} />
+                          <span className="font-heading font-black text-base text-slate-900">{plan.name}</span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-500 mb-4">{plan.durationDays || plan.duration} days · {plan.visibilityTier} visibility</p>
+                        
+                        <div className="border-t border-slate-100 pt-3 mt-auto">
+                          {plan.discountPercent > 0 ? (
+                            <div className="space-y-1">
+                              <p className="text-xs text-slate-400 line-through font-medium">{formatPKR(plan.originalPrice ?? plan.price)}</p>
+                              <div className="flex items-baseline gap-2">
+                                <p className="text-xl font-black text-slate-900">{formatPKR(plan.finalPrice ?? plan.price)}</p>
+                              </div>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-black uppercase mt-1 border border-amber-100">
+                                <Tag size={10} /> {plan.discountPercent}% OFF · Save {formatPKR(plan.savings || 0)}
+                              </span>
+                            </div>
+                          ) : (
+                            <p className="text-xl font-black text-slate-900">{formatPKR(plan.price)}</p>
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">Start Date</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">Campaign Start Date</label>
                     <input
                       type="date"
                       value={form.startDate}
@@ -280,81 +290,94 @@ export default function CreateAdvertisementPage() {
                         if (value && value < todayInput) return;
                         setForm((f) => ({ ...f, startDate: value }));
                       }}
-                      className="w-full h-11 px-4 border border-[#E5E7EB] rounded-xl text-sm"
+                      className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all shadow-sm"
                       required
                     />
-                    <p className="text-xs text-[#64748B] mt-1.5 font-semibold">{formatAdDate(form.startDate)}</p>
+                    <p className="text-xs text-slate-500 mt-2 font-medium">{formatAdDate(form.startDate)}</p>
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">
-                      End Date <span className="normal-case font-medium text-[#94A3B8]">(auto · {planDurationDays} days)</span>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                      Campaign End Date <span className="normal-case font-medium text-slate-400 ml-1">(Auto-calculated)</span>
                     </label>
-                    <div className="w-full min-h-[44px] px-4 py-2.5 border border-[#E5E7EB] rounded-xl text-sm bg-[#F8FAFC] flex flex-col justify-center">
-                      <span className="font-bold text-[#0F172A]">{endDate ? formatAdDate(endDate) : '—'}</span>
-                      <span className="text-[10px] text-[#94A3B8] mt-0.5">Calculated from selected plan</span>
+                    <div className="w-full h-12 px-4 border border-slate-200 rounded-xl text-sm bg-slate-100 flex items-center shadow-sm">
+                      <span className="font-semibold text-slate-700">{endDate ? formatAdDate(endDate) : 'Select a plan'}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#64748B] block mb-2">Daily Budget (optional)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Leave empty for fixed plan pricing"
-                    value={form.dailyBudget}
-                    onChange={(e) => setForm((f) => ({ ...f, dailyBudget: e.target.value }))}
-                    className="w-full h-11 px-4 border border-[#E5E7EB] rounded-xl text-sm"
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">Campaign Description <span className="normal-case font-medium text-slate-400 ml-1">(Optional)</span></label>
+                  <textarea
+                    placeholder="Write a custom note to display on your featured advertisement..."
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all shadow-sm resize-none"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting || !selectedPlan}
-                  className="w-full py-3 bg-[#00A878] hover:bg-[#009E66] disabled:opacity-50 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                >
-                  {submitting ? 'Processing…' : <>Pay & Submit for Approval <ChevronRight size={16} /></>}
-                </button>
+                <div className="pt-4 mt-6 border-t border-slate-100">
+                  <button
+                    type="submit"
+                    disabled={submitting || !selectedPlan}
+                    className="w-full h-14 bg-slate-900 hover:bg-slate-800 focus:ring-4 focus:ring-slate-900/10 disabled:opacity-50 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg text-base"
+                  >
+                    {submitting ? (
+                      <><div className="w-5 h-5 border-[2.5px] border-slate-400 border-t-white rounded-full animate-spin"></div> Processing…</>
+                    ) : (
+                      <>Submit Campaign Request <ChevronRight size={18} /></>
+                    )}
+                  </button>
+                  <p className="text-center text-[11px] font-medium text-slate-500 mt-4">
+                    By submitting, the total amount will be deducted from your wallet balance.
+                  </p>
+                </div>
               </form>
             )}
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <Card title="Payment Summary">
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-[#64748B]">Plan</span><span className="font-bold">{selectedPlan?.name || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-[#64748B]">Duration</span><span className="font-bold">{planDurationDays} days</span></div>
-              <div className="flex justify-between"><span className="text-[#64748B]">Campaign Period</span><span className="font-bold text-right">{formatAdDateRange(form.startDate, endDate)}</span></div>
+            <div className="space-y-4 text-sm mt-2">
+              <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">Plan selected</span><span className="font-bold text-slate-900">{selectedPlan?.name || '—'}</span></div>
+              <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">Duration</span><span className="font-bold text-slate-900">{planDurationDays} days</span></div>
+              <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">Dates</span><span className="font-bold text-slate-900 text-right">{formatAdDateRange(form.startDate, endDate)}</span></div>
               {hasDiscount && (
-                <>
-                  <div className="flex justify-between"><span className="text-[#64748B]">Original Price</span><span className="line-through text-[#94A3B8]">{formatPKR(originalPrice)}</span></div>
-                  <div className="flex justify-between"><span className="text-[#64748B]">Discount</span><span className="font-bold text-amber-600">{selectedPlan.discountPercent}% OFF</span></div>
-                  <div className="flex justify-between"><span className="text-[#64748B]">You Save</span><span className="font-bold text-emerald-600">{formatPKR(selectedPlan.savings || 0)}</span></div>
-                </>
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">Original Price</span><span className="line-through text-slate-400 font-medium">{formatPKR(originalPrice)}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">Discount</span><span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">{selectedPlan.discountPercent}% OFF</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">You Save</span><span className="font-bold text-emerald-600">{formatPKR(selectedPlan.savings || 0)}</span></div>
+                </div>
               )}
-              <div className="flex justify-between border-t border-[#E5E7EB] pt-3">
-                <span className="font-bold">Final Price</span>
-                <span className="font-black text-[#00A878]">{selectedPlan ? formatPKR(displayPrice) : '—'}</span>
+              <div className="flex justify-between items-center border-t border-slate-200 pt-4 mt-4">
+                <span className="font-bold text-base text-slate-900">Total Due</span>
+                <span className="font-black text-2xl tracking-tight text-slate-900">{selectedPlan ? formatPKR(displayPrice) : '—'}</span>
               </div>
             </div>
           </Card>
+          
           <Card title="Wallet Balance">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#E8FFF5] flex items-center justify-center text-[#00A878]">
-                <Wallet size={18} />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-900 shadow-sm">
+                  <Wallet size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider mb-0.5">Available Balance</p>
+                  <p className="text-xl font-black text-slate-900 tracking-tight">{walletBalance != null ? formatPKR(walletBalance) : '—'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-[#64748B] font-bold uppercase">Available</p>
-                <p className="text-lg font-black text-[#0F172A]">{walletBalance != null ? formatPKR(walletBalance) : '—'}</p>
-              </div>
+              <Link href="/manufacturer/transactions" className="text-xs font-bold text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-100 whitespace-nowrap text-center">
+                Top up wallet
+              </Link>
             </div>
-            <Link href="/manufacturer/transactions" className="text-xs font-bold text-[#00A878] mt-3 inline-block hover:underline">
-              Manage wallet →
-            </Link>
           </Card>
-          <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E5E7EB] text-xs text-[#64748B] leading-relaxed">
-            After payment, campaigns enter <strong>Pending Approval</strong>. Admin review typically completes within 1–2 hours.
+          
+          <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 text-sm text-blue-800 leading-relaxed font-medium flex gap-3">
+            <Sparkles className="shrink-0 text-blue-500 mt-0.5" size={18} />
+            <div>
+              After payment, your campaign will enter <strong className="text-blue-900">Pending Approval</strong>. Admin review typically completes within 1–2 hours.
+            </div>
           </div>
         </div>
       </div>

@@ -45,7 +45,7 @@ const Navigation = () => {
                     </button>
 
                     {/* Desktop Navigation */}
-                    <div className="desktop-auth-menu flex items-center space-x-8">
+                    <div className="hidden md:flex desktop-auth-menu items-center space-x-8">
                         <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">Marketplace</Link>
                         <Link href="/industries" className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">Industries</Link>
                         <Link href="/about" className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">About</Link>
@@ -65,13 +65,7 @@ const Navigation = () => {
                                         Dashboard
                                     </Link>
                                 )}
-                                <Link
-                                    href="/admin-login"
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-all shadow-sm border border-gray-700 font-bold text-xs uppercase tracking-wider"
-                                >
-                                    <Lock size={14} className="text-emerald-400" />
-                                    ADMIN
-                                </Link>
+
                                 <button
                                     onClick={handleLogout}
                                     className="px-4 py-2 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium"
@@ -87,13 +81,7 @@ const Navigation = () => {
                                 <Link href="/register" className="px-4 py-2 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium">
                                     Sign Up
                                 </Link>
-                                <Link
-                                    href="/admin-login"
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-all shadow-sm border border-gray-700 font-bold text-xs uppercase tracking-wider"
-                                >
-                                    <Lock size={14} className="text-emerald-400" />
-                                    ADMIN
-                                </Link>
+
                             </div>
                         )}
                     </div>
@@ -117,14 +105,7 @@ const Navigation = () => {
                                             Dashboard
                                         </Link>
                                     )}
-                                    <Link
-                                        href="/admin-login"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex justify-center items-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-black transition-all font-bold text-xs uppercase tracking-wider"
-                                    >
-                                        <Lock size={14} className="text-emerald-400" />
-                                        ADMIN
-                                    </Link>
+
                                     <button
                                         onClick={handleLogout}
                                         className="w-full text-center px-4 py-3 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium"
@@ -140,14 +121,7 @@ const Navigation = () => {
                                     <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="text-center px-4 py-3 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium">
                                         Sign Up
                                     </Link>
-                                    <Link
-                                        href="/admin-login"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex justify-center items-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-black transition-all font-bold text-xs uppercase tracking-wider"
-                                    >
-                                        <Lock size={14} className="text-emerald-400" />
-                                        ADMIN
-                                    </Link>
+
                                 </div>
                             )}
                         </div>

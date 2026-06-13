@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         localStorage.removeItem('gearup_user');
         localStorage.removeItem('token');
+        localStorage.removeItem('wholesaler_cart');
     };
 
     const updateUser = (userData) => {

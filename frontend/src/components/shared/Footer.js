@@ -29,6 +29,8 @@ export default function Footer() {
               <Link href="/terms">Terms of Service</Link>
               <span className="premium-footer-dot"></span>
               <Link href="/contact">Contact</Link>
+              <span className="premium-footer-dot"></span>
+              <Link href="/admin-login" className="text-emerald-500 font-medium">Admin Portal</Link>
             </nav>
 
             {/* Right — Status */}

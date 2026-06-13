@@ -58,17 +58,18 @@ export default function SponsoredProducts({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-black text-[#0F172A] flex items-center gap-2">
-          <Sparkles size={18} className="text-[#00A878]" /> {title}
+      <div className={placement === 'homepage_featured' ? 'mb-8' : 'mb-5'}>
+        <h2 className={`font-black flex items-center gap-2 ${placement === 'homepage_featured' ? 'text-2xl sm:text-3xl text-slate-900 tracking-tight' : 'text-lg text-slate-900'}`}>
+          <Sparkles size={placement === 'homepage_featured' ? 24 : 18} className="text-emerald-500" /> {title}
         </h2>
-        <p className="text-xs text-[#64748B] font-semibold uppercase tracking-wider mt-1">{subtitle}</p>
+        <p className={`font-semibold uppercase tracking-widest mt-2 ${placement === 'homepage_featured' ? 'text-sm text-slate-500' : 'text-xs text-slate-500'}`}>{subtitle}</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
         {items.map((product) => (
           <SponsoredProductCard
             key={product.adId || product.id}
             product={product}
+            isPremium={placement === 'homepage_featured'}
             onAddToCart={(p) => {
               if (p.adId) trackAdEvent(p.adId, 'click', { placement });
               onAddToCartClick?.(p);

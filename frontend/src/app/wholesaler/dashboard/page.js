@@ -28,6 +28,7 @@ import QuickActionsCard from '@/components/dashboard/QuickActionsCard';
 import StatCard from '@/components/dashboard/StatCard';
 import DashboardSectionHeader from '@/components/dashboard/DashboardSectionHeader';
 import Skeleton from '@/components/common/Skeleton';
+import DashboardMetricsGrid from '@/components/dashboard/DashboardMetricsGrid';
 import VerificationStatusBanner from '@/components/shared/VerificationStatusBanner';
 import { getVerificationDisplayState } from '@/lib/verificationStats';
 import { AD_SYSTEM_ENABLED } from '@/lib/advertisingConfig';
@@ -146,7 +147,11 @@ export default function WholesalerDashboard() {
                 if (sid) supplierIds.add(sid);
             });
         });
-        const deliveredOrders = filtered.filter((o) => ['delivered', 'completed'].includes((o.status || '').toLowerCase())).length;
+        const deliveredOrders = filtered.filter((o) => {
+            const globalStatus = (o.status || '').toLowerCase();
+            if (['delivered', 'completed'].includes(globalStatus)) return true;
+            return o.sellerStats?.some(s => ['delivered', 'completed'].includes((s.status || '').toLowerCase()));
+        }).length;
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const todaysOrders = purchaseOrders.filter((o) => o.createdAt && new Date(o.createdAt) >= startOfToday).length;
@@ -451,27 +456,26 @@ export default function WholesalerDashboard() {
                 />
             )}
 
-            <section className="flex flex-col space-y-5">
-                <DashboardSectionHeader
-                    title="Procurement overview"
-                    subtitle="Live purchasing metrics and supplier activity"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-                    {overviewStats.map((stat, index) => (
-                        <StatCard
-                            key={index}
-                            label={stat.label}
-                            value={stat.value}
-                            change={stat.change}
-                            trend={stat.trend}
-                            icon={stat.icon}
-                            color={stat.color}
-                            href={stat.href}
-                            loading={loading || filtering}
-                        />
-                    ))}
-                </div>
-            </section>
+            <DashboardMetricsGrid
+                role="wholesaler"
+                data={{
+                    totalSpend: stats.totalSpend,
+                    totalRevenue: 0,
+                    purchaseOrdersCount: stats.orderCount,
+                    activeOrders: stats.activeOrders,
+                    walletBalance: walletBalance,
+                    deliveredOrders: stats.deliveredOrders,
+                    todaysOrders: stats.todaysOrders,
+                    pendingPayment: stats.pendingPayment
+                }}
+                loading={loading || filtering}
+                timeLabel={timeLabel}
+                growthRates={{
+                    spend: growthRates.spend,
+                    revenue: '+0%', // Not typical for wholesalers right now
+                    orders: growthRates.orders
+                }}
+            />
 
             {AD_SYSTEM_ENABLED && (
                 <section className="flex flex-col space-y-8 dashboard-divider">

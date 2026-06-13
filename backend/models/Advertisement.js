@@ -61,6 +61,7 @@ const AdvertisementSchema = new mongoose.Schema({
     ref: 'Advertisement'
   },
   customMedia: { type: String, default: null },
+  description: { type: String, default: '' },
   expiredAt: { type: Date, default: null }
 }, { timestamps: true });
 

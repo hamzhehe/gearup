@@ -278,15 +278,15 @@ export default function ManufacturerChatThreadPage() {
                 }`}>
                     
                     {/* Sidebar search bar */}
-                    <div className="p-4 border-b border-[#E5E7EB] bg-[#F8FAFC]">
-                        <div className="relative">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={14} />
+                    <div className="p-4 border-b border-slate-100 bg-white">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={16} />
                             <input 
                                 type="text"
                                 placeholder="Search negotiations..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-[#FFFFFF] rounded-[16px] font-sans text-[13px] font-[600] text-[#0F172A] border border-[#E5E7EB] shadow-[0_2px_8px_rgba(15,23,42,0.04)] focus:outline-none focus:bg-[#FFFFFF] focus:ring-4 focus:ring-[#00A878]/15 focus:border-[#00A878] transition-all placeholder:text-[#94A3B8]"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl h-11 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:bg-white transition-all shadow-sm"
                             />
                         </div>
                     </div>
@@ -312,47 +312,51 @@ export default function ManufacturerChatThreadPage() {
                                     <Link
                                         key={t._id}
                                         href={`/manufacturer/chats/${t._id}`}
-                                        className={`flex items-start gap-3 p-4 rounded-[20px] transition-all duration-300 group mb-2 min-w-0 border ${
-                                            isActive 
-                                                ? 'bg-[#F8FAFC] border-[#00A878]/30 shadow-[0_4px_16px_rgba(0,168,120,0.08)] ring-1 ring-[#00A878]/20' 
+                                        className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 group mb-2 min-w-0 border ${
+                                            isActive
+                                                ? 'bg-slate-100 border-slate-200 shadow-sm ring-1 ring-slate-900/5'
                                                 : isUnread 
-                                                    ? 'bg-[#FFFFFF] border-[#E5E7EB] border-l-[4px] border-l-[#00A878] shadow-[0_4px_12px_rgba(15,23,42,0.05)] hover:border-[#CBD5E1]' 
-                                                    : 'bg-[#FFFFFF] border-transparent hover:bg-[#F8FAFC] hover:border-[#E5E7EB]'
+                                                    ? 'bg-slate-50 border-l-4 border-l-slate-900 shadow-sm hover:shadow-md' 
+                                                    : 'bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200 hover:shadow-sm'
                                         }`}
+                                        style={{ minHeight: '96px' }}
                                     >
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#071A35] to-[#1e3a5f] text-[#FFFFFF] font-sans font-[800] text-[15px] flex items-center justify-center shrink-0 shadow-[0_4px_12px_rgba(7,26,53,0.15)] relative mt-0.5">
+                                        {/* Peer initials badge */}
+                                        <div className="w-12 h-12 rounded-full bg-slate-900 text-white font-heading font-black text-sm flex items-center justify-center shrink-0 shadow-sm relative">
                                             {p?.name?.slice(0, 2).toUpperCase() || 'TR'}
-                                            {(isActive || isUnread) && <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-[2.5px] border-[#FFFFFF] shadow-[0_2px_4px_rgba(0,168,120,0.3)] ${isActive ? 'bg-[#00A878]' : 'bg-[#F59E0B]'}`}></span>}
+                                            {(isActive || isUnread) && <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-[2.5px] border-white shadow-sm ${isActive ? 'bg-slate-400' : 'bg-emerald-500'}`}></span>}
                                         </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2 mb-0.5">
-                                                <span className="font-sans font-[700] text-[#0F172A] text-[13px] truncate group-hover:text-[#00A878] transition-colors">
+                                        {/* Thread Text details */}
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                                <span className="font-heading font-bold text-slate-900 text-sm truncate group-hover:text-slate-700 transition-colors">
                                                     {p?.name || 'Enterprise Trader'}
                                                 </span>
                                                 {last && (
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-[#94A3B8] shrink-0 whitespace-nowrap mt-0.5">
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 shrink-0 whitespace-nowrap">
                                                         {formatTime(last.createdAt)}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="font-sans font-[600] text-[#475569] text-[11px] truncate mb-1">
+                                            <div className="font-body font-semibold text-slate-700 text-xs truncate mb-1.5">
                                                 {t.product?.name || 'Product negotiation'}
                                             </div>
                                             {last && (
-                                                <p className={`text-[11px] truncate ${isUnread ? 'font-black text-slate-900' : 'text-[#64748B] font-medium'}`}>
+                                                <p className={`text-xs truncate ${isUnread ? 'font-black text-slate-900' : 'text-slate-500 font-medium'}`}>
                                                     {last.text}
                                                 </p>
                                             )}
                                         </div>
 
+                                        {/* Product thumbnail */}
                                         {sideImg ? (
-                                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#E5E7EB] shrink-0 hidden sm:block shadow-xs mt-0.5">
+                                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 shadow-sm ml-2">
                                                 <img src={sideImg} alt={t.product?.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                             </div>
                                         ) : (
-                                            <div className="w-10 h-10 bg-slate-50 border border-[#E5E7EB] rounded-xl flex items-center justify-center shrink-0 hidden sm:flex shadow-xs mt-0.5">
-                                                <Package className="text-slate-300" size={14} />
+                                            <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm ml-2">
+                                                <Package className="text-slate-300" size={16} />
                                             </div>
                                         )}
                                     </Link>
@@ -366,38 +370,34 @@ export default function ManufacturerChatThreadPage() {
                 <div className="flex-1 flex flex-col h-full bg-[#F8FAFC]/50 relative">
                     
                     {/* Premium Header Context Card */}
-                    <div className="bg-[#FFFFFF] border-b border-[#E5E7EB] p-5 lg:px-8 lg:py-6 flex flex-col sm:flex-row sm:items-center justify-between shadow-[0_4px_24px_rgba(15,23,42,0.04)] shrink-0 z-10 gap-4">
-                        <div className="flex items-center gap-4 min-w-0">
+                    <div className="bg-white border-b border-slate-100 p-5 lg:px-8 lg:py-6 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm shrink-0 z-10 gap-4">
+                        <div className="flex items-center gap-5 min-w-0">
                             {/* Larger Premium Product Thumbnail */}
-                            <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-[16px] overflow-hidden border border-[#E5E7EB] shrink-0 shadow-[0_2px_8px_rgba(15,23,42,0.06)] bg-[#F8FAFC] flex items-center justify-center">
+                            <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-2xl overflow-hidden border border-slate-200 shrink-0 shadow-sm bg-slate-50 flex items-center justify-center">
                                 {loading ? (
-                                    <div className="w-full h-full bg-slate-200 animate-pulse" />
+                                    <div className="w-full h-full bg-slate-100 animate-pulse" />
                                 ) : (
                                     threadImg ? (
                                         <img src={threadImg} alt={thread?.product?.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                                     ) : (
-                                        <Package className="text-[#94A3B8]" size={24} />
+                                        <Package className="text-slate-300" size={24} />
                                     )
                                 )}
                             </div>
 
                             <div className="min-w-0">
-                                <div className="font-sans font-[800] text-[#0F172A] text-[16px] lg:text-[18px] tracking-tight truncate flex items-center gap-2">
+                                <div className="font-heading font-black text-slate-900 text-lg tracking-tight truncate flex items-center gap-2 mb-1">
                                     {thread?.product?.name || 'Wholesale Listing Negotiation'}
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1">
-                                    <span className="font-sans font-[700] text-[13px] text-[#475569] flex items-center gap-1">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                    <span className="font-body font-bold text-sm text-slate-600 flex items-center gap-1.5">
                                         {peer?.name || 'Verified Partner'}
-                                        <CheckCheck size={14} className="text-[#00A878]" />
+                                        <CheckCheck size={16} className="text-emerald-500" />
                                     </span>
-                                    <span className="w-1 h-1 bg-[#CBD5E1] rounded-full"></span>
+                                    <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
                                     <span className="flex items-center gap-1.5">
-                                        <span className="w-2 h-2 bg-[#00A878] rounded-full animate-pulse shadow-[0_0_8px_rgba(0,168,120,0.5)]"></span>
-                                        <span className="font-sans font-[600] text-[12px] text-[#00A878]">Online</span>
-                                    </span>
-                                    <span className="w-1 h-1 bg-[#CBD5E1] rounded-full hidden sm:block"></span>
-                                    <span className="font-sans font-[600] text-[11px] text-[#64748B] bg-[#F8FAFC] px-2 py-0.5 rounded-md border border-[#E5E7EB] hidden sm:block">
-                                        B2B Negotiation
+                                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                                        <span className="font-body font-bold text-xs text-emerald-600 uppercase tracking-wider">Online</span>
                                     </span>
                                 </div>
                             </div>
@@ -407,7 +407,7 @@ export default function ManufacturerChatThreadPage() {
                         {thread?.product?._id && (
                             <Link
                                 href={`/wholesaler/marketplace/product/${thread.product._id}`}
-                                className="px-5 py-2.5 bg-[#FFFFFF] border border-[#E5E7EB] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#0F172A] rounded-[14px] font-sans font-[700] text-[12px] uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 shadow-[0_2px_8px_rgba(15,23,42,0.04)]"
+                                className="px-6 py-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-body font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 shadow-sm outline-none focus:ring-2 focus:ring-slate-900"
                             >
                                 View Listing <ExternalLink size={14} />
                             </Link>
@@ -418,13 +418,13 @@ export default function ManufacturerChatThreadPage() {
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 z-0 flex flex-col">
                         {(thread?.messages || []).length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fadeIn">
-                                <div className="w-20 h-20 bg-[#FFFFFF] rounded-full border border-[#E5E7EB] shadow-[0_8px_24px_rgba(15,23,42,0.06)] flex items-center justify-center mb-6">
-                                    <Inbox className="text-[#00A878]" size={36} />
+                                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                                    <MessageSquare className="text-slate-400" size={40} />
                                 </div>
-                                <h3 className="font-sans text-[22px] font-[800] text-[#0F172A] tracking-tight mb-3">
-                                    No active conversations yet
+                                <h3 className="font-heading text-xl font-bold text-slate-900 tracking-tight mb-3">
+                                    No messages yet
                                 </h3>
-                                <p className="font-sans text-[14px] text-[#64748B] font-[500] max-w-md leading-relaxed">
+                                <p className="font-body text-sm text-slate-500 font-medium max-w-[320px] leading-relaxed mx-auto">
                                     Send a message below to start this conversation with the buyer.
                                 </p>
                             </div>
@@ -473,16 +473,16 @@ export default function ManufacturerChatThreadPage() {
                     </div>
 
                     {/* Premium Message Composer */}
-                    <div className="p-4 lg:p-6 bg-[#FFFFFF]/80 backdrop-blur-xl border-t border-[#E5E7EB] shrink-0 z-10 sticky bottom-0">
+                    <div className="p-4 lg:p-6 bg-white border-t border-slate-100 shrink-0 z-10 sticky bottom-0">
                         <form 
                             onSubmit={send} 
                             className="flex items-end gap-3 max-w-5xl mx-auto w-full min-w-0 relative"
                         >
                             {/* Input container */}
-                            <div className="flex-1 relative bg-[#FFFFFF] border border-[#E5E7EB] rounded-[24px] flex items-center min-w-0 transition-all focus-within:ring-4 focus-within:ring-[#00A878]/10 focus-within:border-[#00A878] shadow-[0_4px_16px_rgba(15,23,42,0.04)] focus-within:shadow-[0_8px_24px_rgba(0,168,120,0.08)]">
+                            <div className="flex-1 relative bg-slate-50 border border-slate-200 rounded-2xl flex items-center min-w-0 transition-all focus-within:ring-2 focus-within:ring-slate-900/10 focus-within:border-slate-900 focus-within:bg-white shadow-sm">
                                 <button 
                                     type="button"
-                                    className="p-3.5 text-[#94A3B8] hover:text-[#0F172A] hover:bg-[#F8FAFC] rounded-l-[24px] transition-colors shrink-0"
+                                    className="p-3.5 text-slate-400 hover:text-slate-900 rounded-l-2xl transition-colors shrink-0 outline-none focus:ring-2 focus:ring-inset focus:ring-slate-200"
                                 >
                                     <Paperclip size={20} />
                                 </button>
@@ -492,13 +492,13 @@ export default function ManufacturerChatThreadPage() {
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
                                     placeholder="Type your message here..."
-                                    className="flex-1 bg-transparent px-2 py-4 font-sans text-[15px] font-[500] text-[#0F172A] focus:outline-none placeholder:text-[#94A3B8] min-w-0"
+                                    className="flex-1 bg-transparent px-2 py-4 font-body text-sm font-medium text-slate-900 focus:outline-none placeholder:text-slate-400 min-w-0 h-[56px]"
                                     maxLength={8000}
                                 />
 
                                 <button 
                                     type="button"
-                                    className="p-3.5 text-[#94A3B8] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors shrink-0 hidden sm:block"
+                                    className="p-3.5 text-slate-400 hover:text-slate-900 transition-colors shrink-0 hidden sm:block outline-none focus:ring-2 focus:ring-inset focus:ring-slate-200"
                                 >
                                     <Smile size={20} />
                                 </button>
@@ -508,9 +508,9 @@ export default function ManufacturerChatThreadPage() {
                             <button 
                                 type="submit"
                                 disabled={sending || !text.trim()}
-                                className="w-14 h-14 rounded-[20px] bg-[#00A878] text-[#FFFFFF] flex items-center justify-center hover:bg-[#009268] disabled:opacity-50 disabled:bg-[#E5E7EB] disabled:text-[#94A3B8] transition-all shrink-0 shadow-[0_4px_16px_rgba(0,168,120,0.25)] hover:shadow-[0_8px_24px_rgba(0,168,120,0.35)] hover:-translate-y-1 cursor-pointer"
+                                className="w-[56px] h-[56px] rounded-2xl bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 disabled:opacity-50 disabled:bg-slate-100 disabled:text-slate-400 transition-all shrink-0 shadow-md hover:shadow-lg hover:-translate-y-0.5 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900"
                             >
-                                {sending ? <div className="w-5 h-5 border-[2.5px] border-white/30 border-t-white rounded-full animate-spin"></div> : <Send size={20} className="ml-1" />}
+                                {sending ? <div className="w-5 h-5 border-[2.5px] border-slate-400 border-t-white rounded-full animate-spin"></div> : <Send size={20} className="ml-1" />}
                             </button>
                         </form>
                     </div>

@@ -50,6 +50,7 @@ import QuickActionsCard from '@/components/dashboard/QuickActionsCard';
 import StatCard from '@/components/dashboard/StatCard';
 import DashboardSectionHeader from '@/components/dashboard/DashboardSectionHeader';
 import Skeleton from '@/components/common/Skeleton';
+import DashboardMetricsGrid from '@/components/dashboard/DashboardMetricsGrid';
 import VerificationStatusBanner from '@/components/shared/VerificationStatusBanner';
 import { getVerificationDisplayState } from '@/lib/verificationStats';
 
@@ -71,6 +72,7 @@ const ManufacturerDashboard = () => {
     const [marketProducts, setMarketProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [openIssueCount, setOpenIssueCount] = useState(0);
+    const [walletBalance, setWalletBalance] = useState(null);
 
     const fetchDashboardData = useCallback(async () => {
         try {
@@ -107,12 +109,15 @@ const ManufacturerDashboard = () => {
             }
 
             const countOpen = (list) => (list || []).filter((d) => OPEN_DISPUTE_STATUSES.includes(d.status)).length;
-            const [sellerDisputesRes, myDisputesRes] = await Promise.all([
+            const [sellerDisputesRes, myDisputesRes, walletRes] = await Promise.all([
                 fetch(`${getApiBaseUrl()}/api/disputes/seller`, { headers }),
-                fetch(`${getApiBaseUrl()}/api/disputes/mine`, { headers })
+                fetch(`${getApiBaseUrl()}/api/disputes/mine`, { headers }),
+                fetch(`${getApiBaseUrl()}/api/wallet/me`, { headers })
             ]);
             const sellerDisputesData = await sellerDisputesRes.json();
             const myDisputesData = await myDisputesRes.json();
+            const walletData = await walletRes.json();
+            if (walletData.success) setWalletBalance(walletData.data?.balance ?? null);
             setOpenIssueCount(
                 (sellerDisputesData.success ? countOpen(sellerDisputesData.data) : 0) +
                 (myDisputesData.success ? countOpen(myDisputesData.data) : 0)
@@ -166,6 +171,7 @@ const ManufacturerDashboard = () => {
         const completedFiltered = filtered.filter((o) => isCompletedSaleOrder(o, userId));
 
         const activeOrders = filtered.filter((o) => !['delivered', 'completed', 'cancelled'].includes((o.status || '').toLowerCase())).length;
+        const purchaseOrdersCount = orders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange) && (o.buyer?._id || o.buyer)?.toString() === userId).length;
         const { totalRevenue: revenue, totalSalesCount: filteredCount } = getSalesMetrics(completedFiltered, userId);
         const pendingDeliveries = filtered.filter((o) => {
             const status = (o.status || '').toLowerCase();
@@ -211,6 +217,7 @@ const ManufacturerDashboard = () => {
             lowStockAlerts,
             topSellingCount,
             publishedProductCount,
+            purchaseOrdersCount,
         };
     }, [orders, products, marketProducts, timeRange, user]);
 
@@ -739,27 +746,27 @@ const ManufacturerDashboard = () => {
             )}
 
             {/* SECTION 2 — KPI ANALYTICS CARDS */}
-            <section className="flex flex-col space-y-5">
-                <DashboardSectionHeader
-                    title="Business overview"
-                    subtitle="Live key performance indicators and operational metrics"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                    {overviewStats.map((stat, index) => (
-                        <StatCard
-                            key={index}
-                            label={stat.label}
-                            value={stat.value}
-                            change={stat.change}
-                            trend={stat.trend}
-                            icon={stat.icon}
-                            color={stat.color}
-                            href={stat.href}
-                            loading={loading || filtering}
-                        />
-                    ))}
-                </div>
-            </section>
+            <DashboardMetricsGrid
+                role="manufacturer"
+                data={{
+                    totalSpend: 0, 
+                    totalRevenue: stats.revenue,
+                    salesOrdersCount: stats.filteredCount,
+                    purchaseOrdersCount: stats.purchaseOrdersCount,
+                    activeOrders: stats.activeOrders,
+                    walletBalance: walletBalance,
+                    deliveredOrders: stats.deliveredOrders,
+                    todaysOrders: stats.todaysOrders,
+                    pendingPayment: stats.pendingDeliveries
+                }}
+                loading={loading || filtering}
+                timeLabel={timeLabel}
+                growthRates={{
+                    spend: '+0%',
+                    revenue: growthMetrics.revenue?.change,
+                    orders: growthMetrics.orders?.change
+                }}
+            />
 
             {/* SECTION 3 — SALES & PURCHASE PERFORMANCE */}
             <section className="flex flex-col space-y-8 pt-10 dashboard-divider">

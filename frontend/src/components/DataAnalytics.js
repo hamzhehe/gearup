@@ -80,7 +80,7 @@ const DataAnalytics = () => {
                         </div>
 
                         {/* Floating Card */}
-                        <div className={`absolute -bottom-8 -left-8 bg-white p-5 rounded-xl shadow-xl border border-slate-200 z-20 w-64 ${styles.animateBounceSlow}`}>
+                        <div className={`absolute -bottom-4 left-0 sm:-left-4 md:-bottom-8 md:-left-8 bg-white p-5 rounded-xl shadow-xl border border-slate-200 z-20 w-64 ${styles.animateBounceSlow}`}>
                             <div className="flex items-start gap-4">
                                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                                     <Users className="text-emerald-600" size={20} />

@@ -353,6 +353,7 @@ export default function AdminOverviewCommandCenter({ metrics = {} }) {
     pendingPayouts = 0,
     openDisputes = 0,
     pendingAdvertisements = 0,
+    advertisementRevenue = 0,
     todayRevenue = 0,
     monthlyRevenue = 0,
     commissionEarned = 0,
@@ -483,7 +484,7 @@ export default function AdminOverviewCommandCenter({ metrics = {} }) {
               { key: 'live', label: 'Live metrics', className: 'bg-[#F0FDFA] text-[#14B8A6] border border-[#14B8A6]/20' },
             ]}
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
             <FinanceKpiTile
               label="Today's Revenue"
               value={formatDashboardMoney(todayRevenue)}
@@ -501,6 +502,12 @@ export default function AdminOverviewCommandCenter({ metrics = {} }) {
               value={formatDashboardMoney(commissionEarned)}
               trend={financialTrends.commissionEarned}
               icon={Receipt}
+            />
+            <FinanceKpiTile
+              label="Ad Revenue"
+              value={formatDashboardMoney(advertisementRevenue)}
+              trend={0}
+              icon={Megaphone}
             />
             <FinanceKpiTile
               label="Escrow Balance"
@@ -538,11 +545,11 @@ export default function AdminOverviewCommandCenter({ metrics = {} }) {
                   <h2 className="text-[38px] md:text-[44px] lg:text-[48px] font-extrabold text-white tracking-[-0.04em] leading-tight">
                     Marketplace Health
                   </h2>
-                  <p className="max-w-xl text-[16px] leading-8 text-slate-300">
+                  <p className="mx-auto max-w-xl text-[16px] leading-8 text-slate-300">
                     Real-time marketplace performance, growth trends, and platform activity.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap justify-center gap-4">
                   <Link
                     href="/admin/analytics/marketplace"
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-semibold text-[#0F172A] shadow-[0_12px_35px_rgba(255,255,255,0.18)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(255,255,255,0.22)]"

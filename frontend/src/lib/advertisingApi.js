@@ -224,5 +224,6 @@ export function mapSponsoredItem(item) {
     verified: manufacturer?.verified ?? manufacturer?.verificationStatus === 'verified',
     sponsored: true,
     rankScore: item.rankScore,
+    sellerRole: manufacturer?.role || 'manufacturer'
   };
 }

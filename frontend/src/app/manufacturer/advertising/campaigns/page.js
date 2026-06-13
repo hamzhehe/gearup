@@ -124,8 +124,8 @@ export default function ActiveCampaignsPage() {
         title="Active Campaigns"
         subtitle="Manage, pause, and monitor your sponsored product campaigns"
         actions={
-          <Link href="/manufacturer/advertising/create" className="px-4 py-2.5 bg-[#00A878] text-white text-sm font-bold rounded-xl hover:bg-[#009E66] shadow-sm">
-            + New Campaign
+          <Link href="/manufacturer/advertising/create" className="px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+            <Sparkles size={16} /> New Campaign
           </Link>
         }
       />
@@ -136,19 +136,19 @@ export default function ActiveCampaignsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
         {[
-          { label: 'Active Campaigns', value: stats.active, icon: Sparkles, accent: 'text-[#00A878] bg-[#E8FFF5]' },
-          { label: 'Pending Review', value: stats.pending, icon: Eye, accent: 'text-blue-600 bg-blue-50' },
-          { label: 'Total Investment', value: formatPKR(stats.spend), icon: MousePointerClick, accent: 'text-[#0F172A] bg-slate-100' },
+          { label: 'Active Campaigns', value: stats.active, icon: Sparkles, accent: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+          { label: 'Pending Review', value: stats.pending, icon: Eye, accent: 'text-blue-600 bg-blue-50 border-blue-100' },
+          { label: 'Total Investment', value: formatPKR(stats.spend), icon: MousePointerClick, accent: 'text-slate-900 bg-slate-50 border-slate-200' },
         ].map(({ label, value, icon: Icon, accent }) => (
-          <div key={label} className="dashboard-card p-4 sm:p-5 flex items-center gap-4">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>
-              <Icon size={20} />
+          <div key={label} className="bg-white rounded-2xl p-5 sm:p-6 flex items-center gap-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border ${accent}`}>
+              <Icon size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#64748B]">{label}</p>
-              <p className="text-xl font-black text-[#0F172A] mt-0.5">{value}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+              <p className="text-2xl font-black text-slate-900 mt-1 tracking-tight">{value}</p>
             </div>
           </div>
         ))}
@@ -156,10 +156,10 @@ export default function ActiveCampaignsPage() {
 
       <div className="space-y-4 mb-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-black uppercase tracking-wider text-[#0F172A] flex items-center gap-2">
-            <Megaphone size={16} className="text-[#00A878]" /> Campaign Management
+          <h2 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <Megaphone size={16} className="text-emerald-500" /> Campaign Management
           </h2>
-          <span className="text-xs font-bold text-[#64748B]">
+          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
             {filteredCampaigns.length} of {campaigns.length} campaigns
           </span>
         </div>
@@ -178,18 +178,18 @@ export default function ActiveCampaignsPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-[#64748B]">
-          <Loader2 size={32} className="animate-spin text-[#00A878] mb-3" />
-          <p className="text-sm font-bold">Loading campaigns…</p>
+        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+          <div className="w-10 h-10 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin mb-4" />
+          <p className="text-sm font-bold tracking-wide">Loading campaigns…</p>
         </div>
       ) : filteredCampaigns.length === 0 ? (
         hasFilters && campaigns.length > 0 ? (
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-10 text-center">
-            <p className="text-sm font-bold text-[#64748B]">No campaigns match your filters.</p>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-12 text-center shadow-sm">
+            <p className="text-sm font-bold text-slate-500">No campaigns match your filters.</p>
             <button
               type="button"
               onClick={() => { setSearch(''); setStatusFilter('all'); setPlanFilter('all'); setDateFilter('all'); }}
-              className="mt-3 text-sm font-bold text-[#00A878] hover:underline"
+              className="mt-4 text-sm font-bold text-emerald-600 hover:text-emerald-700 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm transition-all hover:shadow-md"
             >
               Clear all filters
             </button>

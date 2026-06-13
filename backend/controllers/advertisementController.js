@@ -52,7 +52,7 @@ async function refreshAdMetrics(ad) {
 
 async function populateAdQuery(query) {
   return query
-    .populate('manufacturerId', 'name businessDetails verificationStatus avatar')
+    .populate('manufacturerId', 'name businessDetails verificationStatus avatar role')
     .populate('productId', 'name images price category minimumOrderQuantity bulkUnit stock description');
 }
 
@@ -66,6 +66,7 @@ function serializeSponsoredAd(ad) {
     productId: product?._id || ad.productId,
     campaignType: ad.campaignType,
     customMedia: ad.customMedia || null,
+    description: ad.description || '',
     plan: ad.plan,
     rankScore: ad.rankScore,
     status: ad.status,
@@ -85,7 +86,8 @@ function serializeSponsoredAd(ad) {
       name: manufacturer.name,
       city: manufacturer.businessDetails?.city || 'Pakistan',
       country: manufacturer.businessDetails?.country || 'Pakistan',
-      verified: manufacturer.verificationStatus === 'verified'
+      verified: manufacturer.verificationStatus === 'verified',
+      role: manufacturer.role
     } : null
   };
 }
@@ -155,7 +157,7 @@ exports.createCampaign = async (req, res) => {
       campaignType = 'sponsored_product',
       plan,
       budget,
-      dailyBudget,
+      description,
       startDate,
       endDate,
       submitForPayment,
@@ -185,7 +187,7 @@ exports.createCampaign = async (req, res) => {
       campaignType,
       plan,
       budget: budget ?? campaignBudget,
-      dailyBudget: dailyBudget || null,
+      description: description || '',
       startDate: start,
       endDate: end,
       status: submitForPayment ? 'pending_payment' : 'draft',
@@ -215,7 +217,7 @@ exports.updateCampaign = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Only draft or pending payment campaigns can be edited' });
     }
 
-    const allowed = ['campaignType', 'plan', 'budget', 'dailyBudget', 'startDate', 'endDate', 'productId'];
+    const allowed = ['campaignType', 'plan', 'budget', 'description', 'startDate', 'endDate', 'productId'];
     for (const key of allowed) {
       if (req.body[key] !== undefined) ad[key] = req.body[key];
     }
@@ -382,7 +384,7 @@ exports.duplicateCampaign = async (req, res) => {
       campaignType: source.campaignType,
       plan: source.plan,
       budget: source.budget,
-      dailyBudget: source.dailyBudget,
+      description: source.description,
       startDate: start,
       endDate: end,
       status: 'pending_payment',
@@ -445,11 +447,23 @@ exports.getSponsoredProducts = async (req, res) => {
     });
 
     const { category, keyword, limit = 12, placement = 'marketplace' } = req.query;
-    const filter = await getActiveAdsFilter();
+
+    const extraFilter = {};
+    if (placement === 'homepage_featured') {
+      extraFilter.campaignType = 'homepage_featured';
+    } else if (placement === 'featured') {
+      extraFilter.campaignType = { $in: ['featured_product', 'sponsored_product'] };
+    }
+
+    const filter = await getActiveAdsFilter(extraFilter);
 
     let ads = await populateAdQuery(
       Advertisement.find(filter).sort({ rankScore: -1, createdAt: -1 }).limit(Number(limit) * 3)
     );
+
+    if (req.user && (req.user.role === 'manufacturer' || req.user.role === 'wholesaler')) {
+      ads = ads.filter((ad) => String(ad.manufacturerId?._id || ad.manufacturerId) !== String(req.user.id));
+    }
 
     if (category && category !== 'all') {
       ads = ads.filter((ad) => {
@@ -465,12 +479,6 @@ exports.getSponsoredProducts = async (req, res) => {
         const mfg = (ad.manufacturerId?.name || '').toLowerCase();
         return name.includes(q) || mfg.includes(q);
       });
-    }
-
-    if (placement === 'homepage_featured') {
-      ads = ads.filter((ad) => ad.campaignType === 'homepage_featured');
-    } else if (placement === 'featured') {
-      ads = ads.filter((ad) => ['featured_product', 'sponsored_product'].includes(ad.campaignType));
     }
 
     const serialized = ads.slice(0, Number(limit)).map(serializeSponsoredAd);
@@ -489,9 +497,15 @@ exports.getRecommendedSponsored = async (req, res) => {
 
     const limit = Number(req.query.limit) || 5;
     const filter = await getActiveAdsFilter();
-    const ads = await populateAdQuery(
-      Advertisement.find(filter).sort({ rankScore: -1 }).limit(limit)
+    let ads = await populateAdQuery(
+      Advertisement.find(filter).sort({ rankScore: -1 }).limit(limit * 3)
     );
+
+    if (req.user && (req.user.role === 'manufacturer' || req.user.role === 'wholesaler')) {
+      ads = ads.filter((ad) => String(ad.manufacturerId?._id || ad.manufacturerId) !== String(req.user.id));
+    }
+
+    ads = ads.slice(0, limit);
     res.json({ success: true, data: ads.map(serializeSponsoredAd) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

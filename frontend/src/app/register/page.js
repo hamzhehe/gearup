@@ -374,6 +374,12 @@ const Register = () => {
                 throw new Error(data.error || 'Failed to create account');
             }
 
+            // explicitly wipe out any guest cart from previous session
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('wholesaler_cart');
+                sessionStorage.removeItem('wholesaler_cart');
+            }
+
             await login(data.user, data.token);
 
             router.push(`/verify-email?email=${encodeURIComponent(payload.email)}`);
@@ -769,6 +775,11 @@ const Register = () => {
                                     });
                                     const data = await response.json();
                                     if (!response.ok) throw new Error(data.error || 'Google Sign In failed');
+
+                                    if (typeof window !== 'undefined') {
+                                        localStorage.removeItem('wholesaler_cart');
+                                        sessionStorage.removeItem('wholesaler_cart');
+                                    }
 
                                     await login(data.user, data.token);
 

@@ -161,7 +161,7 @@ const Sidebar = ({
           </div>
         )}
 
-        <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto min-h-0">
+        <nav className="flex-1 py-4 space-y-1.5 overflow-y-auto min-h-0">
           {user?.role === 'admin' ? (
             <AdminSidebarNav showLabels={showLabels} onNavigate={isMobile ? onClose : undefined} />
           ) : (
@@ -177,8 +177,8 @@ const Sidebar = ({
             return (
               <React.Fragment key={`${item.label}-${item.path}`}>
                 {showSection && (
-                  <div className="px-3 pt-4 pb-1">
-                    <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">
+                  <div className="px-5 pt-5 pb-2">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">
                       {item.section}
                     </div>
                   </div>
@@ -187,20 +187,20 @@ const Sidebar = ({
                 href={item.path}
                 onClick={isMobile ? onClose : undefined}
                 title={!showLabels ? item.label : undefined}
-                className={`flex items-center gap-3 py-2.5 rounded-[10px] text-[13px] font-medium transition-all duration-200 ${
-                  showLabels ? 'px-3' : 'px-0 justify-center'
+                className={`flex items-center gap-3.5 py-3 rounded-xl transition-all duration-200 group relative ${
+                  showLabels ? 'px-4 mx-3' : 'px-0 justify-center mx-2'
                 } ${
                   isActive
-                    ? 'seller-nav-active text-white'
-                    : 'text-white/60 hover:bg-white/[0.06] hover:text-white/95'
+                    ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/5'
+                    : 'text-white/60 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
-                <span className="w-[18px] h-[18px] flex items-center justify-center shrink-0">
-                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                <span className={`flex items-center justify-center shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-emerald-400' : 'text-white/50 group-hover:text-white/80'} />
                 </span>
-                {showLabels && <span className="truncate flex-1">{item.label}</span>}
+                {showLabels && <span className={`truncate flex-1 tracking-wide ${isActive ? 'text-[13.5px] font-bold' : 'text-[13.5px] font-medium'}`}>{item.label}</span>}
                 {item.badgeCount > 0 && showLabels && (
-                  <span className="min-w-[20px] h-[20px] bg-[#F59E0B] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="min-w-[20px] h-[20px] bg-emerald-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-sm">
                     {item.badgeCount}
                   </span>
                 )}
