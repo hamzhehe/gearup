@@ -13,7 +13,7 @@ const OrdersTable = ({
   onAddCatalogClick,
   variant = 'sales',
   viewAllHref = '/manufacturer/orders',
-  purchaseViewAllHref = '/manufacturer/purchases',
+  purchaseViewAllHref = '/wholesaler/orders',
   emptyTitle,
   emptyDescription,
   emptyActionLabel,
@@ -29,6 +29,11 @@ const OrdersTable = ({
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const dropdownRef = useRef(null);
   const router = useRouter();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 3;
+  const totalPages = Math.ceil(orders.length / pageSize);
+  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -116,7 +121,7 @@ const OrdersTable = ({
           </div>
         </div>
         <Link
-          href={viewAllHref}
+          href={isPurchases ? purchaseViewAllHref : viewAllHref}
           className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-[14px] font-bold tracking-wide transition-all duration-250 border border-[#00A878] text-[#00A878] hover:bg-[#00A878] hover:text-white whitespace-nowrap"
         >
           <span>View all orders</span>
@@ -163,7 +168,7 @@ const OrdersTable = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F1F5F9]">
-              {orders.map((order, idx) => {
+              {paginatedOrders.map((order, idx) => {
                 const formattedDate = order.date
                   ? new Date(order.date).toLocaleDateString('en-GB', {
                       day: 'numeric',
@@ -299,23 +304,41 @@ const OrdersTable = ({
         <div className="flex items-center justify-between mt-6 pt-2">
             <div className="flex items-center gap-2 text-[#64748B]">
                 <Package size={16} className="stroke-[2.5]" />
-                <span className="text-[13px] font-medium">Showing {orders.length} of {orders.length > 15 ? orders.length + 10 : orders.length} Orders</span>
+                <span className="text-[13px] font-medium">Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, orders.length)} of {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}</span>
             </div>
             
             <div className="flex items-center gap-1">
-                <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50" disabled>
-                    <ChevronLeft size={18} />
-                </button>
-                <button className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#00A878] text-white font-semibold text-[13px]">
-                    1
-                </button>
-                <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors font-semibold text-[13px]">
-                    2
-                </button>
-                <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors">
-                    <ChevronRight size={18} />
-                </button>
-            </div>
+                  <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      <ChevronLeft size={18} />
+                  </button>
+                  
+                  {/* Page Numbers */}
+                  {[...Array(totalPages)].map((_, i) => (
+                      <button 
+                          key={i}
+                          onClick={() => setCurrentPage(i + 1)}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-semibold transition-colors ${
+                              currentPage === i + 1 
+                              ? 'bg-[#00A878] text-white' 
+                              : 'text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
+                          }`}
+                      >
+                          {i + 1}
+                      </button>
+                  ))}
+                  
+                  <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      <ChevronRight size={18} />
+                  </button>
+              </div>
         </div>
       )}
     </div>

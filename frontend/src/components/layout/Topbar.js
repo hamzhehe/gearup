@@ -70,13 +70,21 @@ const Topbar = ({
   }, []);
 
   const breadcrumbs = useMemo(() => {
+    if (pathname === '/wholesaler/marketplace' || pathname.startsWith('/wholesaler/marketplace/')) {
+      const roleLabel = user?.role === 'wholesaler' ? 'Wholesaler' : 'Manufacturer';
+      if (pathname === '/wholesaler/marketplace') {
+        return [roleLabel, 'Marketplace'];
+      }
+      return [roleLabel, 'Marketplace', 'Product Details'];
+    }
+
     const parts = pathname.split('/').filter(Boolean);
     if (parts.length === 0) return ['Home'];
     return parts.map((p) => {
       const name = p.replace(/-/g, ' ');
       return name.charAt(0).toUpperCase() + name.slice(1);
     });
-  }, [pathname]);
+  }, [pathname, user?.role]);
 
   const handleLogout = () => {
     setDropdownOpen(false);

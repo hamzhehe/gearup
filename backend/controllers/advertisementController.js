@@ -449,7 +449,9 @@ exports.getSponsoredProducts = async (req, res) => {
     const { category, keyword, limit = 12, placement = 'marketplace' } = req.query;
 
     const extraFilter = {};
-    if (placement === 'homepage_featured') {
+    if (['manufacturer_overview', 'wholesaler_overview'].includes(placement)) {
+      return res.json({ success: true, count: 0, data: [] });
+    } else if (placement === 'homepage_featured') {
       extraFilter.campaignType = 'homepage_featured';
     } else if (placement === 'featured') {
       extraFilter.campaignType = { $in: ['featured_product', 'sponsored_product'] };

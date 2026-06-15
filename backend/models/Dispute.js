@@ -17,6 +17,14 @@ const DisputeSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        index: true
+    },
+    orderItemName: {
+        type: String
+    },
     refundAmount: {
         type: Number,
         default: 0

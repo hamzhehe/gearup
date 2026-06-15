@@ -9,7 +9,8 @@ import {
   CircleDollarSign,
   Percent,
   TrendingUp,
-  Settings
+  Settings,
+  Bell
 } from 'lucide-react';
 
 export const ADMIN_NAV_GROUPS = [

@@ -29,6 +29,10 @@ import PageShell from '@/components/dashboard/PageShell';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import InvoiceModal from '@/components/shared/InvoiceModal';
+import { formatPKR, sumBuyerRefundDeductions } from '@/lib/financeUtils';
+import { isBuyerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
+import { useRefundRecords } from '@/hooks/useRefundRecords';
+import { subscribeFinancialSync } from '@/lib/financialSync';
 
 const WholesalerOrdersPage = () => {
     const { user } = useAuth();
@@ -39,6 +43,8 @@ const WholesalerOrdersPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState(null);
+    const { refundRecords } = useRefundRecords();
+    const userId = resolveUserId(user);
 
     const handleViewInvoice = useCallback((selectedOrder) => {
         if (!selectedOrder) return;
@@ -103,17 +109,22 @@ const WholesalerOrdersPage = () => {
         fetchOrders();
     }, [fetchOrders]);
 
+    useEffect(() => {
+        return subscribeFinancialSync(() => {
+            fetchOrders();
+        });
+    }, [fetchOrders]);
+
     const purchaseOrders = useMemo(() => {
-        const loggedInUserId = (user?.id || user?._id)?.toString();
-        if (user?.role === 'manufacturer' || user?.role === 'wholesaler') {
-            return orders.filter((order) => {
-                const buyerObj = order.buyer || order.wholesaler;
-                const buyerId = (buyerObj?._id || buyerObj?.id || buyerObj)?.toString();
-                return loggedInUserId && buyerId === loggedInUserId;
-            });
-        }
-        return orders;
-    }, [orders, user]);
+        return orders.filter((order) => isBuyerOnOrder(order, userId));
+    }, [orders, userId]);
+
+    const purchaseStats = useMemo(() => {
+        const grossSpend = purchaseOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const buyerRefundDeductions = sumBuyerRefundDeductions(refundRecords, userId, null);
+        const totalSpent = Math.max(0, grossSpend - buyerRefundDeductions);
+        return { totalSpent, grossSpend, buyerRefundDeductions };
+    }, [purchaseOrders, refundRecords, userId]);
 
     const filteredOrders = useMemo(() => {
         let result = purchaseOrders;
@@ -184,7 +195,7 @@ const WholesalerOrdersPage = () => {
 
     const renderTimeline = (status) => {
         const steps = ['pending', 'paid', 'shipped', 'delivered'];
-        const stepLabels = ['Placed', 'Paid', 'Shipped', 'Delivered'];
+        const stepLabels = ['Placed', 'Paid', 'Shipped', 'Received'];
         
         const lowerStatus = status?.toLowerCase();
         let currentIndex = steps.indexOf(lowerStatus);
@@ -249,6 +260,28 @@ const WholesalerOrdersPage = () => {
                 </div>
             </div>
 
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-2">
+                {[
+                    { label: 'Total Spent', value: formatPKR(purchaseStats.totalSpent), icon: Banknote, color: 'text-blue-700', bg: 'bg-blue-100' },
+                    { label: 'Total Purchases', value: purchaseOrders.length, icon: Package, color: 'text-indigo-700', bg: 'bg-indigo-100' },
+                    { label: 'Pending Orders', value: purchaseOrders.filter(o => o.status === 'pending' || o.status === 'processing').length, icon: Clock, color: 'text-amber-700', bg: 'bg-amber-100' },
+                    { label: 'Active Suppliers', value: new Set(purchaseOrders.map(o => o.seller?._id || o.manufacturer?._id || o.sellerStats?.[0]?.seller?._id).filter(Boolean)).size || purchaseOrders.length > 0 ? new Set(purchaseOrders.map(o => o.seller?._id || o.manufacturer?._id || o.sellerStats?.[0]?.seller?._id).filter(Boolean)).size : 0, icon: ShieldCheck, color: 'text-emerald-700', bg: 'bg-emerald-100' }
+                ].map((stat, idx) => (
+                    <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-md transition-all duration-300 group hover:-translate-y-1">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} transition-transform duration-300 group-hover:scale-110`}>
+                                <stat.icon size={18} className="stroke-[2.5]" />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">{stat.label}</div>
+                            <div className="font-sans text-2xl font-bold text-slate-900">{stat.value}</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             {/* Error handling */}
             {error && (
                 <div className="p-4 bg-[#FEF2F2] border border-[#EF4444]/20 rounded-[14px] flex items-center gap-3 text-[#EF4444]">
@@ -289,7 +322,7 @@ const WholesalerOrdersPage = () => {
                                         onClick={() => setFilter(f)}
                                         className={`status-tab ${isActive ? 'active' : ''}`}
                                     >
-                                        <span className="capitalize">{f}</span>
+                                        <span className="capitalize">{f === 'delivered' ? 'Received' : f}</span>
                                     </button>
                                 );
                             })}
@@ -377,7 +410,7 @@ const WholesalerOrdersPage = () => {
                                                             {/* Status Badge */}
                                                             <td>
                                                                 <div className={`badge-enterprise inline-flex ${order.status.toLowerCase() === 'delivered' || order.status.toLowerCase() === 'paid' ? 'success' : order.status.toLowerCase() === 'shipped' ? 'info' : order.status.toLowerCase() === 'cancelled' ? 'danger' : 'warning'}`}>
-                                                                    {order.status}
+                                                                    {order.status.toLowerCase() === 'delivered' ? 'Received' : order.status}
                                                                 </div>
                                                             </td>
 
@@ -436,7 +469,7 @@ const WholesalerOrdersPage = () => {
                                                         </div>
                                                     </div>
                                                     <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${statusStyle}`}>
-                                                        {order.status}
+                                                        {order.status.toLowerCase() === 'delivered' ? 'Received' : order.status}
                                                     </div>
                                                 </div>
 

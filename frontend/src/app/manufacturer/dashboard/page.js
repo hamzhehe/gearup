@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { isLowStockAlert } from '@/utils/inventory';
-import { formatPKR, getSalesMetrics } from '@/lib/financeUtils';
+import { formatPKR, buildRefundRecordsFromDisputes, getNetSalesMetrics, getNetPurchaseMetrics, getUserFinancialMetrics } from '@/lib/financeUtils';
+import { subscribeFinancialSync } from '@/lib/financialSync';
 import { isOrderInTimeRange, OPEN_DISPUTE_STATUSES } from '@/lib/dashboardUtils';
 import {
     countTopSellingProducts,
@@ -22,6 +23,7 @@ import {
     isChartEligibleSellerOrder,
     isChartEligiblePurchaseOrder,
     isSellerOnOrder,
+    isBuyerOnOrder,
     resolveUserId,
 } from '@/lib/dashboardAnalytics';
 import {
@@ -59,7 +61,7 @@ const PremiumAnalyticsSection = dynamic(() => import('@/components/dashboard/Pre
 const CategoryShareChart = dynamic(() => import('@/components/dashboard/CategoryShareChart'), { ssr: false, loading: () => <Skeleton variant="chart" /> });
 const FinancialInsights = dynamic(() => import('@/components/dashboard/FinancialInsights'), { ssr: false, loading: () => <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6"><Skeleton variant="stat" /><Skeleton variant="stat" /><Skeleton variant="stat" /></div> });
 const OrdersTable = dynamic(() => import('@/components/dashboard/OrdersTable'), { ssr: false, loading: () => <Skeleton variant="table" rows={5} /> });
-const SponsoredProducts = dynamic(() => import('@/components/ads/SponsoredProducts'), { ssr: false });
+
 
 const ManufacturerDashboard = () => {
     const [timeRange, setTimeRange] = useState('6months');
@@ -73,10 +75,11 @@ const ManufacturerDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [openIssueCount, setOpenIssueCount] = useState(0);
     const [walletBalance, setWalletBalance] = useState(null);
+    const [refundRecords, setRefundRecords] = useState([]);
 
-    const fetchDashboardData = useCallback(async () => {
+    const fetchDashboardData = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const token = localStorage.getItem('token');
             const headers = { 'Authorization': `Bearer ${token}` };
 
@@ -118,19 +121,31 @@ const ManufacturerDashboard = () => {
             const myDisputesData = await myDisputesRes.json();
             const walletData = await walletRes.json();
             if (walletData.success) setWalletBalance(walletData.data?.balance ?? null);
-            setOpenIssueCount(
-                (sellerDisputesData.success ? countOpen(sellerDisputesData.data) : 0) +
-                (myDisputesData.success ? countOpen(myDisputesData.data) : 0)
+
+            const allDisputes = [
+                ...(sellerDisputesData.success ? sellerDisputesData.data || [] : []),
+                ...(myDisputesData.success ? myDisputesData.data || [] : []),
+            ];
+            const uniqueDisputes = Array.from(
+                new Map(allDisputes.map((d) => [String(d._id || d.id), d])).values()
             );
+            setRefundRecords(buildRefundRecordsFromDisputes(uniqueDisputes));
+            setOpenIssueCount(countOpen(uniqueDisputes));
         } catch (err) {
             console.error('Failed to fetch dashboard data:', err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [user?.id, user?._id, user?.role]);
 
     useEffect(() => {
         fetchDashboardData();
+    }, [fetchDashboardData]);
+
+    useEffect(() => {
+        return subscribeFinancialSync(() => {
+            fetchDashboardData(true);
+        });
     }, [fetchDashboardData]);
 
     useEffect(() => {
@@ -171,8 +186,13 @@ const ManufacturerDashboard = () => {
         const completedFiltered = filtered.filter((o) => isCompletedSaleOrder(o, userId));
 
         const activeOrders = filtered.filter((o) => !['delivered', 'completed', 'cancelled'].includes((o.status || '').toLowerCase())).length;
-        const purchaseOrdersCount = orders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange) && (o.buyer?._id || o.buyer)?.toString() === userId).length;
-        const { totalRevenue: revenue, totalSalesCount: filteredCount } = getSalesMetrics(completedFiltered, userId);
+        const purchaseOrders = orders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange) && isBuyerOnOrder(o, userId));
+        const purchaseOrdersCount = purchaseOrders.length;
+        const receivedProducts = purchaseOrders.filter((o) => ['delivered', 'completed'].includes((o.status || '').toLowerCase())).length;
+        const financials = getUserFinancialMetrics(orders, userId, refundRecords, timeRange);
+        const revenue = financials.totalRevenue;
+        const totalSpend = financials.totalSpend;
+        const filteredCount = financials.salesOrdersCount;
         const pendingDeliveries = filtered.filter((o) => {
             const status = (o.status || '').toLowerCase();
             return status === 'processing' || status === 'pending';
@@ -213,13 +233,15 @@ const ManufacturerDashboard = () => {
             filteredCount,
             pendingOrders,
             deliveredOrders,
+            receivedProducts,
             todaysOrders,
             lowStockAlerts,
             topSellingCount,
             publishedProductCount,
             purchaseOrdersCount,
+            totalSpend,
         };
-    }, [orders, products, marketProducts, timeRange, user]);
+    }, [orders, products, marketProducts, timeRange, user, refundRecords]);
 
     // Dynamic Time-comparison KPI Growth Configurator
     const timeLabel = useMemo(() => {
@@ -244,10 +266,22 @@ const ManufacturerDashboard = () => {
         const currentCompleted = currentRangeOrders.filter((o) => isCompletedSaleOrder(o, userId));
         const previousCompleted = previousRangeOrders.filter((o) => isCompletedSaleOrder(o, userId));
 
-        const currentRevenue = getSalesMetrics(currentCompleted, userId).totalRevenue;
-        const previousRevenue = getSalesMetrics(previousCompleted, userId).totalRevenue;
-        const currentSalesCount = getSalesMetrics(currentCompleted, userId).totalSalesCount;
-        const previousSalesCount = getSalesMetrics(previousCompleted, userId).totalSalesCount;
+        const currentRevenue = getNetSalesMetrics(currentCompleted, userId, refundRecords, timeRange).totalRevenue;
+        const previousRevenue = getNetSalesMetrics(
+            previousCompleted,
+            userId,
+            refundRecords,
+            null,
+            { start, end }
+        ).totalRevenue;
+        const currentSalesCount = getNetSalesMetrics(currentCompleted, userId, refundRecords, timeRange).totalSalesCount;
+        const previousSalesCount = getNetSalesMetrics(
+            previousCompleted,
+            userId,
+            refundRecords,
+            null,
+            { start, end }
+        ).totalSalesCount;
 
         const currentTopSelling = countTopSellingProducts(orders, products, userId, timeRange);
         const previousTopSelling = countTopSellingProducts(previousRangeOrders, products, userId, null);
@@ -284,7 +318,7 @@ const ManufacturerDashboard = () => {
             today: formatGrowthChange(todaysCount, yesterdaysCount, todayLabel),
             topSelling: formatGrowthChange(currentTopSelling, previousTopSelling, timeLabel),
         };
-    }, [orders, products, timeRange, timeLabel, user]);
+    }, [orders, products, timeRange, timeLabel, user, refundRecords]);
 
     const overviewStats = useMemo(() => [
         // ROW 1
@@ -749,13 +783,14 @@ const ManufacturerDashboard = () => {
             <DashboardMetricsGrid
                 role="manufacturer"
                 data={{
-                    totalSpend: 0, 
+                    totalSpend: stats.totalSpend,
                     totalRevenue: stats.revenue,
                     salesOrdersCount: stats.filteredCount,
                     purchaseOrdersCount: stats.purchaseOrdersCount,
                     activeOrders: stats.activeOrders,
                     walletBalance: walletBalance,
                     deliveredOrders: stats.deliveredOrders,
+                    receivedProducts: stats.receivedProducts,
                     todaysOrders: stats.todaysOrders,
                     pendingPayment: stats.pendingDeliveries
                 }}
@@ -807,7 +842,8 @@ const ManufacturerDashboard = () => {
                         orders={orders} 
                         user={user} 
                         timeRange={timeRange} 
-                        loading={loading || filtering} 
+                        loading={loading || filtering}
+                        refundRecords={refundRecords}
                     />
                 </div>
             </section>
@@ -845,16 +881,7 @@ const ManufacturerDashboard = () => {
                 </div>
             </section>
 
-            {/* SECTION 5 — FEATURED ADVERTISEMENTS */}
-            <section className="flex flex-col space-y-8 pt-10 dashboard-divider">
-                <div className="w-full">
-                    <SponsoredProducts 
-                        placement="homepage_featured"
-                        title="Featured Marketplace Products"
-                        subtitle="Explore premium offerings from verified suppliers"
-                    />
-                </div>
-            </section>
+
         </div>
     );
 };

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { getApiBaseUrl } from '@/lib/api';
+import { dispatchFinancialSync } from '@/lib/financialSync';
 import {
   AlertTriangle,
   Clock,
@@ -97,6 +98,9 @@ export default function DisputeResolutionCard({ dispute, role, onRefresh }) {
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Request failed');
     onRefresh?.();
+    if (/\/refund/i.test(url)) {
+      dispatchFinancialSync({ source: 'dispute-refund', disputeId: dispute._id });
+    }
     return data;
   };
 

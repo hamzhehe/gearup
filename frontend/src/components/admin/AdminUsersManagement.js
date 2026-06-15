@@ -91,7 +91,14 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
   }, [selectedUser]);
 
   const handleBlockToggle = async (userId, isBlocked) => {
-    if (!confirm(`Are you sure you want to ${isBlocked ? 'activate' : 'suspend'} this user?`)) return;
+    let reason = '';
+    if (!isBlocked) {
+      const input = window.prompt('Please provide a reason for suspending this user:');
+      if (input === null) return; // User cancelled
+      reason = input.trim();
+    } else {
+      if (!window.confirm('Are you sure you want to activate this user?')) return;
+    }
 
     const token = localStorage.getItem('token');
     const endpoint = isBlocked ? 'unblock' : 'block';
@@ -99,7 +106,11 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
     try {
       const res = await fetch(`${getApiBaseUrl()}/api/admin/users/${userId}/${endpoint}`, {
         method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
       });
       const data = await res.json();
       if (data.success) {
@@ -107,7 +118,7 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
         await fetchUsers();
         setSelectedUser((current) => {
           if (!current || current._id !== userId) return current;
-          return { ...current, isBlocked: !isBlocked };
+          return { ...current, isBlocked: !isBlocked, blockReason: isBlocked ? '' : reason };
         });
       } else {
         toast.error(data.error || 'Action failed');

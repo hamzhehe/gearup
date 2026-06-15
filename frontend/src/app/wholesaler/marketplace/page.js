@@ -476,7 +476,7 @@ const MarketplacePage = ({ isDashboard = true }) => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Wholesale Marketplace</h1>
+                    <h1 className="font-heading text-3xl font-black text-[#0F172A] tracking-tight">Marketplace</h1>
                     <p className="text-slate-500 font-medium text-sm mt-1 max-w-xl leading-relaxed">
                         Source premium sports equipment directly from verified manufacturing partners. Discover, negotiate, and order in bulk with absolute confidence.
                     </p>

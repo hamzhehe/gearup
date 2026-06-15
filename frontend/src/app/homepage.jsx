@@ -17,7 +17,7 @@ export default function Homepage() {
       
 
       {/* Sponsored Campaigns Section */}
-      <section className="w-full bg-[#020617] pt-28 pb-32 relative">
+      <section className="w-full bg-[#020617] pt-16 pb-20 md:pt-28 md:pb-32 relative">
         {/* Decorative Grid and Gradients */}
         <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.03] z-0 pointer-events-none" />
         <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-[#0a0f1c] to-transparent pointer-events-none z-0" />
@@ -29,10 +29,10 @@ export default function Homepage() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
               <span className="text-slate-300 text-sm font-bold uppercase tracking-widest">Premium Showcase</span>
             </div>
-            <h2 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 mb-6 tracking-tight">
+            <h2 className="text-3xl md:text-4xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 mb-6 tracking-tight px-2">
               Sponsored Campaigns
             </h2>
-            <p className="text-lg md:text-xl text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg lg:text-xl text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">
               Featured opportunities from verified manufacturers. Discover world-class equipment and establish direct supply chain partnerships.
             </p>
           </div>

@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
     ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { Download, Activity, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Download, Activity, TrendingUp, TrendingDown, Percent } from 'lucide-react';
 import { formatPKR, formatPKRShort } from '@/lib/financeUtils';
 
 export default function ProfitAnalyticsPage() {
@@ -124,7 +124,7 @@ export default function ProfitAnalyticsPage() {
                         { label: 'Gross Profit', value: formatPKR(stats.grossProfit), icon: Activity, color: 'text-teal-600', bg: 'bg-teal-50' },
                         { label: 'Total Revenue', value: formatPKR(stats.revenue), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                         { label: 'Total Expenses', value: formatPKR(stats.expenses), icon: TrendingDown, color: 'text-rose-600', bg: 'bg-rose-50' },
-                        { label: 'Profit Margin', value: `${stats.profitMargin.toFixed(1)}%`, icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+                        { label: 'Profit Margin', value: `${stats.profitMargin.toFixed(1)}%`, icon: Percent, color: 'text-indigo-600', bg: 'bg-indigo-50' }
                     ].map((kpi, i) => (
                         <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-4">

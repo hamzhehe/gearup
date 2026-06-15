@@ -11,7 +11,10 @@ import Badge from '@/components/common/Badge';
 import PageShell from '@/components/dashboard/PageShell';
 import PageHeader from '@/components/dashboard/PageHeader';
 import StatCard from '@/components/dashboard/StatCard';
-import { formatPKR } from '@/lib/financeUtils';
+import { formatPKR, sumSellerRefundDeductions } from '@/lib/financeUtils';
+import { isSellerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
+import { useRefundRecords } from '@/hooks/useRefundRecords';
+import { subscribeFinancialSync } from '@/lib/financialSync';
 import {
     Clock,
     AlertCircle,
@@ -23,7 +26,7 @@ import {
     Truck,
     CheckCircle,
     MoreVertical,
-    DollarSign,
+    Banknote,
     TrendingUp,
     Download,
     Inbox,
@@ -47,6 +50,7 @@ const ManufacturerOrdersPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('newest');
+    const { refundRecords } = useRefundRecords();
 
     const fetchOrders = useCallback(async () => {
         try {
@@ -73,6 +77,14 @@ const ManufacturerOrdersPage = () => {
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
+
+    useEffect(() => {
+        return subscribeFinancialSync(() => {
+            fetchOrders();
+        });
+    }, [fetchOrders]);
+
+    const userId = resolveUserId(user);
 
     const handleStatusUpdate = async (orderId, newStatus) => {
         try {
@@ -108,23 +120,7 @@ const ManufacturerOrdersPage = () => {
         }
     };
 
-    // Filter to show only orders where this manufacturer is a seller
-    const salesOrders = orders.filter((order) => {
-        const loggedInUserId = (user?.id || user?._id)?.toString();
-        const buyerId = (order.buyer?._id || order.buyer?.id || order.buyer)?.toString();
-        if (buyerId && loggedInUserId && buyerId === loggedInUserId) {
-            return false;
-        }
-
-        const orderManId = (order.manufacturer?._id || order.manufacturer?.id || order.manufacturer)?.toString();
-        if (orderManId && loggedInUserId && orderManId === loggedInUserId) {
-            return true;
-        }
-        return order.sellerStats?.some(stat => {
-            const sellerId = (stat.seller?._id || stat.seller?.id || stat.seller)?.toString();
-            return sellerId && loggedInUserId && sellerId === loggedInUserId;
-        });
-    });
+    const salesOrders = orders.filter((order) => isSellerOnOrder(order, userId));
     // Calculate dynamic stats
     const totalOrders = salesOrders.length;
     const pendingOrders = salesOrders.filter(o => {
@@ -140,12 +136,14 @@ const ManufacturerOrdersPage = () => {
         const status = (s?.status || o.status).toLowerCase();
         return status === 'delivered' || status === 'completed';
     }).length;
-    const totalRevenue = salesOrders.reduce((acc, o) => {
-        const s = o.sellerStats?.find(stat => (stat.seller?._id || stat.seller) === (user?.id || user?._id));
-        const myItems = o.items?.filter(i => (i.seller?._id || i.seller) === (user?.id || user?._id)) || [];
+    const grossRevenue = salesOrders.reduce((acc, o) => {
+        const s = o.sellerStats?.find(stat => (stat.seller?._id || stat.seller)?.toString() === userId);
+        const myItems = o.items?.filter(i => (i.seller?._id || i.seller)?.toString() === userId) || [];
         const amt = s?.subtotal || myItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         return acc + amt;
     }, 0);
+    const sellerRefundDeductions = sumSellerRefundDeductions(refundRecords, userId, null);
+    const totalRevenue = Math.max(0, grossRevenue - sellerRefundDeductions);
 
     // Dynamic count per status tab
     const getCountForStatus = (status) => {
@@ -345,7 +343,7 @@ const ManufacturerOrdersPage = () => {
                     { label: "Pending", value: pendingOrders, icon: Clock, color: "text-amber-600", bg: "bg-amber-50", topColor: "accent-amber" },
                     { label: "Processing", value: processingOrders, icon: RefreshCw, color: "text-blue-600", bg: "bg-blue-50", topColor: "accent-blue" },
                     { label: "Delivered", value: deliveredOrders, icon: CheckCircle, color: "text-[#00A878]", bg: "bg-[#E8FFF5]", topColor: "accent-green" },
-                    { label: "Revenue", value: formatPKR(totalRevenue), icon: DollarSign, color: "text-[#0F172A]", bg: "bg-[#F8FAFC]", topColor: "accent-slate" },
+                    { label: "Revenue", value: formatPKR(totalRevenue), icon: Banknote, color: "text-[#0F172A]", bg: "bg-[#F8FAFC]", topColor: "accent-slate" },
                 ].map((stat, idx) => (
                     <div key={idx} className={`kpi-card-enterprise ${stat.topColor} flex flex-col`}>
                         <div className="flex items-start justify-between mb-4">

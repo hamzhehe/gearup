@@ -18,7 +18,7 @@ function readStoredGroups() {
   }
 }
 
-export default function AdminSidebarNav({ showLabels = true, onNavigate }) {
+export default function AdminSidebarNav({ showLabels = true, onNavigate, unreadCount = 0 }) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState(() => {
     const stored = readStoredGroups();
@@ -98,6 +98,11 @@ export default function AdminSidebarNav({ showLabels = true, onNavigate }) {
                       <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                     </span>
                     {showLabels ? <span className="truncate flex-1 leading-snug">{item.label}</span> : null}
+                    {item.badgeKey === 'newActivity' && unreadCount > 0 && showLabels && (
+                      <span className="min-w-[20px] h-[20px] bg-emerald-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-sm">
+                        {unreadCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

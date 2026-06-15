@@ -9,14 +9,14 @@ const CallToAction = () => {
     return (
         <section className={styles.callToAction}>
             <div className="container mx-auto px-4 max-w-7xl">
-                <div className="bg-[#022c22] rounded-[2.5rem] p-12 md:p-24 relative overflow-hidden text-center md:text-left">
+                <div className="bg-[#022c22] rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-10 md:p-16 lg:p-24 relative overflow-hidden text-center md:text-left">
                     {/* Background Glow */}
                     <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -mr-32 -mt-32"></div>
                     <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-600/10 blur-[100px] rounded-full pointer-events-none -ml-32 -mb-32"></div>
 
                     <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
                         <div>
-                            <h2 className="font-heading text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
+                            <h2 className="font-heading text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
                                 Ready to digitize your sports business?
                             </h2>
                             <p className="font-body text-xl text-slate-300 mb-10 leading-relaxed">

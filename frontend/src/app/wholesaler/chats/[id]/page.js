@@ -12,8 +12,6 @@ import {
     Search,
     Inbox,
     Clock,
-    Paperclip,
-    Smile,
     ChevronRight,
     ExternalLink,
     Check,
@@ -404,28 +402,14 @@ export default function WholesalerChatThreadPage() {
                         >
                             {/* Input container */}
                             <div className="flex-1 relative bg-slate-50 border border-slate-200 rounded-2xl flex items-center min-w-0 transition-all focus-within:ring-2 focus-within:ring-slate-900/10 focus-within:border-slate-900 focus-within:bg-white shadow-sm">
-                                <button 
-                                    type="button"
-                                    className="p-3.5 text-slate-400 hover:text-slate-900 rounded-l-2xl transition-colors shrink-0 outline-none focus:ring-2 focus:ring-inset focus:ring-slate-200"
-                                >
-                                    <Paperclip size={20} />
-                                </button>
-                                
                                 <input 
                                     type="text"
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
                                     placeholder="Type your message here..."
-                                    className="flex-1 bg-transparent px-2 py-4 font-body text-sm font-medium text-slate-900 focus:outline-none placeholder:text-slate-400 min-w-0 h-[56px]"
+                                    className="flex-1 bg-transparent px-4 py-4 font-body text-sm font-medium text-slate-900 focus:outline-none placeholder:text-slate-400 min-w-0 h-[56px]"
                                     maxLength={8000}
                                 />
-
-                                <button 
-                                    type="button"
-                                    className="p-3.5 text-slate-400 hover:text-slate-900 transition-colors shrink-0 hidden sm:block outline-none focus:ring-2 focus:ring-inset focus:ring-slate-200"
-                                >
-                                    <Smile size={20} />
-                                </button>
                             </div>
 
                             {/* Send CTA */}

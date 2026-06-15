@@ -4,6 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getApiBaseUrl } from '@/lib/api';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -26,6 +28,7 @@ import {
   LineChart,
   Receipt,
   Tag,
+  Bell,
 } from 'lucide-react';
 import { AD_SYSTEM_ENABLED } from '@/lib/advertisingConfig';
 import AdminSidebarNav from '@/components/admin/AdminSidebarNav';
@@ -47,6 +50,39 @@ const Sidebar = ({
     router.push('/login');
   };
 
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadOrders, setUnreadOrders] = useState(0);
+  const [unreadChats, setUnreadChats] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/notifications`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const unread = json.data.filter(n => !n.isRead);
+          setUnreadCount(unread.length);
+          setUnreadOrders(unread.filter(n => n.type === 'order' || (n.message || '').toLowerCase().includes('order')).length);
+          setUnreadChats(unread.filter(n => n.type === 'message' || (n.message || '').toLowerCase().includes('chat') || (n.message || '').toLowerCase().includes('message')).length);
+        }
+      } catch (err) {
+        console.error('Failed to load notifications', err);
+      }
+    };
+    if (user) {
+      fetchUnread();
+    }
+    
+    // Listen for custom event to update badge immediately
+    const handleRead = () => fetchUnread();
+    window.addEventListener('notifications-read', handleRead);
+    return () => window.removeEventListener('notifications-read', handleRead);
+  }, [user]);
+
   const getMenuItems = () => {
     if (user?.role === 'admin') {
       return null;
@@ -56,10 +92,10 @@ const Sidebar = ({
       return [
         { label: 'Overview', path: '/wholesaler/dashboard', icon: LayoutDashboard },
         { label: 'Inventory', path: '/manufacturer/products', icon: Package },
-        { label: 'Sales Orders', path: '/manufacturer/orders', icon: ShoppingCart },
-        { label: 'Purchase Orders', path: '/wholesaler/orders', icon: ShoppingBag },
+        { label: 'Sales Orders', path: '/manufacturer/orders', icon: ShoppingCart, hasNotification: unreadOrders },
+        { label: 'Purchase Orders', path: '/wholesaler/orders', icon: ShoppingBag, hasNotification: unreadOrders },
         { label: 'Marketplace', path: '/wholesaler/marketplace', icon: Search },
-        { label: 'Seller Chats', path: '/wholesaler/chats', icon: MessageSquare },
+        { label: 'Seller Chats', path: '/wholesaler/chats', icon: MessageSquare, hasNotification: unreadChats },
         { label: 'Payments', path: '/manufacturer/transactions', icon: Banknote },
         { label: 'Order Issues', path: '/manufacturer/disputes', icon: AlertTriangle },
         { label: 'Analytics', path: '/manufacturer/analytics', icon: BarChart3 },
@@ -69,10 +105,10 @@ const Sidebar = ({
     const manufacturerItems = [
       { label: 'Overview', path: '/manufacturer/dashboard', icon: LayoutDashboard },
       { label: 'Inventory', path: '/manufacturer/products', icon: Package },
-      { label: 'Sales Orders', path: '/manufacturer/orders', icon: ShoppingCart },
-      { label: 'Purchase Orders', path: '/wholesaler/orders', icon: ShoppingBag },
+      { label: 'Sales Orders', path: '/manufacturer/orders', icon: ShoppingCart, hasNotification: unreadOrders },
+      { label: 'Purchase Orders', path: '/wholesaler/orders', icon: ShoppingBag, hasNotification: unreadOrders },
       { label: 'Marketplace', path: '/wholesaler/marketplace', icon: Search },
-      { label: 'Seller Chats', path: '/manufacturer/chats', icon: MessageSquare, badge: true },
+      { label: 'Seller Chats', path: '/manufacturer/chats', icon: MessageSquare, hasNotification: unreadChats },
       { label: 'Payments', path: '/manufacturer/transactions', icon: Banknote },
       { label: 'Order Issues', path: '/manufacturer/disputes', icon: AlertTriangle },
       { label: 'Analytics', path: '/manufacturer/analytics', icon: BarChart3 },
@@ -163,7 +199,7 @@ const Sidebar = ({
 
         <nav className="flex-1 py-4 space-y-1.5 overflow-y-auto min-h-0">
           {user?.role === 'admin' ? (
-            <AdminSidebarNav showLabels={showLabels} onNavigate={isMobile ? onClose : undefined} />
+            <AdminSidebarNav showLabels={showLabels} onNavigate={isMobile ? onClose : undefined} unreadCount={unreadCount} />
           ) : (
             menuItems.map((item, index) => {
             const Icon = item.icon;
@@ -195,9 +231,17 @@ const Sidebar = ({
                     : 'text-white/60 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
-                <span className={`flex items-center justify-center shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                <div className={`relative flex items-center justify-center shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
                   <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-emerald-400' : 'text-white/50 group-hover:text-white/80'} />
-                </span>
+                  {item.hasNotification > 0 && (
+                    <span className="absolute -top-2 -right-2 flex h-[16px] min-w-[16px] items-center justify-center">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
+                      <span className="relative inline-flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-300 to-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)] border border-[rgba(255,255,255,0.4)] px-1 py-0.5 text-[9px] font-black leading-none text-white tracking-tighter">
+                        {item.hasNotification}
+                      </span>
+                    </span>
+                  )}
+                </div>
                 {showLabels && <span className={`truncate flex-1 tracking-wide ${isActive ? 'text-[13.5px] font-bold' : 'text-[13.5px] font-medium'}`}>{item.label}</span>}
                 {item.badgeCount > 0 && showLabels && (
                   <span className="min-w-[20px] h-[20px] bg-emerald-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-sm">

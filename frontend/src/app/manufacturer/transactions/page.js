@@ -19,14 +19,62 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Activity,
-    Inbox
+    Inbox,
+    ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Skeleton from '@/components/common/Skeleton';
 import { formatPKR } from '@/lib/financeUtils';
+import { subscribeFinancialSync } from '@/lib/financialSync';
 import DisputeResolutionCard from '@/components/disputes/DisputeResolutionCard';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
+
+const PAKISTAN_BANKS = [
+    'Habib Bank Limited (HBL)',
+    'Bank Alfalah',
+    'Meezan Bank',
+    'Faysal Bank',
+    'Allied Bank',
+    'United Bank Limited (UBL)',
+    'MCB Bank',
+    'Standard Chartered Bank',
+    'Bank of Punjab',
+    'Askari Bank',
+];
+
+const INITIAL_WITHDRAW_ACCOUNT_FORM = {
+    accountHolderName: '',
+    bankName: '',
+    accountNumber: '',
+    branchCode: '',
+    accountType: '',
+};
+
+const withdrawInputClass =
+    'w-full mt-1.5 px-4 py-3 bg-[#FAFCFD] border border-[#E2E8F0] rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#0F172A] focus:ring-2 focus:ring-slate-900/5 transition-all';
+
+function validateWithdrawAccountForm(form) {
+    const errors = {};
+    if (!form.accountHolderName.trim()) {
+        errors.accountHolderName = 'Account holder name is required.';
+    }
+    if (!form.bankName) {
+        errors.bankName = 'Please select a bank.';
+    }
+    const normalizedAccount = form.accountNumber.trim().replace(/\s/g, '');
+    const isValidIban = /^PK\d{2}[A-Z0-9]{20}$/i.test(normalizedAccount);
+    const isValidAccountNumber = /^\d{10,20}$/.test(normalizedAccount);
+    if (!normalizedAccount) {
+        errors.accountNumber = 'Account number or IBAN is required.';
+    } else if (!isValidIban && !isValidAccountNumber) {
+        errors.accountNumber = 'Enter a valid PK IBAN (24 characters) or account number (10–20 digits).';
+    }
+    if (!form.accountType) {
+        errors.accountType = 'Please select an account type.';
+    }
+    return errors;
+}
 
 const ManufacturerTransactionsPage = () => {
     const { user } = useAuth();
@@ -39,6 +87,10 @@ const ManufacturerTransactionsPage = () => {
     const [ledger, setLedger] = useState([]);
     const [sellerDisputes, setSellerDisputes] = useState([]);
     const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [withdrawAccountForm, setWithdrawAccountForm] = useState(INITIAL_WITHDRAW_ACCOUNT_FORM);
+    const [withdrawFormErrors, setWithdrawFormErrors] = useState({});
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
@@ -108,6 +160,12 @@ const ManufacturerTransactionsPage = () => {
         fetchTransactions();
     }, [fetchTransactions]);
 
+    useEffect(() => {
+        return subscribeFinancialSync(() => {
+            fetchTransactions(true);
+        });
+    }, [fetchTransactions]);
+
     const getStatusBadge = (status) => {
         const lower = status.toLowerCase();
         if (lower === 'completed' || lower === 'paid') return 'text-emerald-700 bg-emerald-100 border-emerald-200';
@@ -159,30 +217,44 @@ const ManufacturerTransactionsPage = () => {
     // Recent Activity
     const recentActivity = [...transactions].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
 
-    const handleWithdraw = async () => {
+    const handleWithdraw = () => {
         const amount = Number(withdrawAmount);
         if (!amount || amount <= 0) {
             alert('Enter a valid amount');
             return;
         }
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${getApiBaseUrl()}/api/wallet/withdraw`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ amount })
+        setShowWithdrawForm(true);
+        setIsSubmitted(false);
+        setWithdrawFormErrors({});
+    };
+
+    const handleWithdrawAccountChange = (field, value) => {
+        setWithdrawAccountForm((prev) => ({ ...prev, [field]: value }));
+        if (withdrawFormErrors[field]) {
+            setWithdrawFormErrors((prev) => {
+                const next = { ...prev };
+                delete next[field];
+                return next;
             });
-            const data = await res.json();
-            if (data.success) {
-                alert(data.message || 'Withdrawal recorded (prototype only).');
-                setWithdrawAmount('');
-                fetchTransactions(true);
-            } else {
-                alert(data.error || 'Withdrawal failed');
-            }
-        } catch {
-            alert('Connection error');
         }
+    };
+
+    const resetWithdrawFlow = () => {
+        setShowWithdrawForm(false);
+        setIsSubmitted(false);
+        setWithdrawAccountForm(INITIAL_WITHDRAW_ACCOUNT_FORM);
+        setWithdrawFormErrors({});
+    };
+
+    const handleWithdrawSubmit = (e) => {
+        e.preventDefault();
+        const errors = validateWithdrawAccountForm(withdrawAccountForm);
+        if (Object.keys(errors).length > 0) {
+            setWithdrawFormErrors(errors);
+            return;
+        }
+        setWithdrawFormErrors({});
+        setIsSubmitted(true);
     };
 
     const handleExport = () => {
@@ -292,25 +364,206 @@ const ManufacturerTransactionsPage = () => {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-[#E7ECF3] p-5 flex flex-col sm:flex-row gap-3 items-end shadow-[0_2px_15px_rgba(0,0,0,0.01)]">
-                <div className="flex-1 w-full">
-                    <label className="font-body text-[9px] font-black uppercase text-slate-400 tracking-widest">Withdraw from wallet (prototype)</label>
-                    <input
-                        type="number"
-                        min="1"
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        placeholder="Amount in PKR"
-                        className="w-full mt-1 px-4 py-2.5 border border-[#E7ECF3] rounded-xl text-sm font-semibold"
-                    />
-                </div>
-                <button
-                    type="button"
-                    onClick={handleWithdraw}
-                    className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-600 transition-colors"
-                >
-                    Withdraw
-                </button>
+            <div className="bg-white rounded-2xl border border-slate-900/10 shadow-[0_2px_15px_rgba(0,0,0,0.01)] overflow-hidden">
+                {!showWithdrawForm ? (
+                    <div className="px-6 md:px-8 py-6 flex flex-col sm:flex-row gap-3 items-end">
+                        <div className="flex-1 w-full">
+                            <label className="font-body text-[9px] font-black uppercase text-slate-400 tracking-widest">Withdraw from wallet (prototype)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                placeholder="Amount in PKR"
+                                className={`${withdrawInputClass} mt-1`}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleWithdraw}
+                            className="px-5 py-3 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-600 transition-colors"
+                        >
+                            Withdraw
+                        </button>
+                    </div>
+                ) : (
+                    <div className="animate-in fade-in duration-300">
+                        <div className="px-6 md:px-8 py-6 border-b border-slate-200 bg-[#FAFCFD]">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="font-body text-[9px] font-black uppercase tracking-widest text-slate-400">Secure payout setup</p>
+                                    <h3 className="font-heading text-xl md:text-2xl font-black text-[#0F172A] tracking-tight mt-1">
+                                        Withdrawal Account Details
+                                    </h3>
+                                    <p className="font-body text-sm text-slate-500 mt-2 max-w-2xl leading-relaxed">
+                                        Provide verified bank details to receive your wallet withdrawal of{' '}
+                                        <span className="font-bold text-slate-800">
+                                            PKR {Number(withdrawAmount || 0).toLocaleString()}
+                                        </span>
+                                        . Your information is handled securely.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={resetWithdrawFlow}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 text-[11px] font-bold uppercase tracking-wider transition-colors shrink-0"
+                                >
+                                    <ArrowLeft size={14} /> Cancel
+                                </button>
+                            </div>
+                        </div>
+
+                        {isSubmitted ? (
+                            <div className="px-6 md:px-8 py-8">
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-5 flex items-start gap-4">
+                                    <div className="w-11 h-11 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                                        <CheckCircle2 size={22} className="text-emerald-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-heading text-base font-black text-emerald-900 tracking-tight">
+                                            Account details saved successfully.
+                                        </p>
+                                        <p className="font-body text-sm text-emerald-800/90 mt-1 leading-relaxed">
+                                            Processing your withdrawal request.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={resetWithdrawFlow}
+                                            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors"
+                                        >
+                                            <ArrowLeft size={14} /> Go Back
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleWithdrawSubmit} className="px-6 md:px-8 py-6 space-y-5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label htmlFor="accountHolderName" className="font-body text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                            Account Holder Name <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            id="accountHolderName"
+                                            type="text"
+                                            required
+                                            value={withdrawAccountForm.accountHolderName}
+                                            onChange={(e) => handleWithdrawAccountChange('accountHolderName', e.target.value)}
+                                            placeholder="Full name as per bank records"
+                                            className={withdrawInputClass}
+                                        />
+                                        {withdrawFormErrors.accountHolderName && (
+                                            <p className="text-rose-500 text-[11px] font-medium mt-1.5">{withdrawFormErrors.accountHolderName}</p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="bankName" className="font-body text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                            Bank Name <span className="text-rose-500">*</span>
+                                        </label>
+                                        <select
+                                            id="bankName"
+                                            required
+                                            value={withdrawAccountForm.bankName}
+                                            onChange={(e) => handleWithdrawAccountChange('bankName', e.target.value)}
+                                            className={withdrawInputClass}
+                                        >
+                                            <option value="">Select your bank</option>
+                                            {PAKISTAN_BANKS.map((bank) => (
+                                                <option key={bank} value={bank}>{bank}</option>
+                                            ))}
+                                        </select>
+                                        {withdrawFormErrors.bankName && (
+                                            <p className="text-rose-500 text-[11px] font-medium mt-1.5">{withdrawFormErrors.bankName}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="accountNumber" className="font-body text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                            Account Number / IBAN <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            id="accountNumber"
+                                            type="text"
+                                            required
+                                            value={withdrawAccountForm.accountNumber}
+                                            onChange={(e) => handleWithdrawAccountChange('accountNumber', e.target.value)}
+                                            placeholder="PK00XXXX... or 10–20 digit account number"
+                                            className={withdrawInputClass}
+                                        />
+                                        {withdrawFormErrors.accountNumber && (
+                                            <p className="text-rose-500 text-[11px] font-medium mt-1.5">{withdrawFormErrors.accountNumber}</p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="branchCode" className="font-body text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                            Branch Code / City
+                                        </label>
+                                        <input
+                                            id="branchCode"
+                                            type="text"
+                                            value={withdrawAccountForm.branchCode}
+                                            onChange={(e) => handleWithdrawAccountChange('branchCode', e.target.value)}
+                                            placeholder="e.g. 0123 or Lahore Main"
+                                            className={withdrawInputClass}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <span className="font-body text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                            Account Type <span className="text-rose-500">*</span>
+                                        </span>
+                                        <div className="mt-2 flex flex-wrap gap-3">
+                                            {['Current Account', 'Saving Account'].map((type) => {
+                                                const selected = withdrawAccountForm.accountType === type;
+                                                return (
+                                                    <label
+                                                        key={type}
+                                                        className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
+                                                            selected
+                                                                ? 'border-[#0F172A] bg-[#FAFCFD] ring-2 ring-slate-900/5'
+                                                                : 'border-[#E2E8F0] bg-[#FAFCFD] hover:border-slate-300'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            name="accountType"
+                                                            value={type}
+                                                            checked={selected}
+                                                            onChange={(e) => handleWithdrawAccountChange('accountType', e.target.value)}
+                                                            className="accent-slate-900"
+                                                        />
+                                                        <span className="text-sm font-semibold text-slate-800">{type}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        {withdrawFormErrors.accountType && (
+                                            <p className="text-rose-500 text-[11px] font-medium mt-1.5">{withdrawFormErrors.accountType}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-600 transition-colors"
+                                    >
+                                        Save Account Details
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={resetWithdrawFlow}
+                                        className="px-6 py-3 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-50 transition-colors"
+                                    >
+                                        Cancel / Go Back
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Header Section */}

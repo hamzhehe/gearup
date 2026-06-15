@@ -60,7 +60,8 @@ exports.protect = async (req, res, next) => {
         }
 
         if (req.user.isBlocked) {
-            return res.status(403).json({ success: false, error: 'Your account has been blocked.' });
+            const reasonText = req.user.blockReason ? ` Reason: ${req.user.blockReason}` : '';
+            return res.status(403).json({ success: false, error: `Your account has been suspended.${reasonText} Please contact support@gearup.com or visit the Contact page for assistance.` });
         }
 
         next();

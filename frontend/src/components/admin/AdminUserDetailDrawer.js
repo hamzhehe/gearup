@@ -299,6 +299,11 @@ export default function AdminUserDetailDrawer({
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-[#64748B]">Account Status</p>
                   <div className="mt-2">
                     <StatusBadge {...accountStatus} />
+                    {user.isBlocked && user.blockReason && (
+                      <p className="mt-2 text-[13px] text-[#DC2626] font-medium bg-[rgba(239,68,68,0.06)] p-3 rounded-[10px] border border-[rgba(239,68,68,0.2)]">
+                        <strong>Reason:</strong> {user.blockReason}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

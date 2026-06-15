@@ -36,11 +36,17 @@ export function resolveUserId(user) {
     return (user?.id || user?._id)?.toString() || null;
 }
 
+/** True when the user placed the order (spent money) — independent of account role. */
+export function isBuyerOnOrder(order, userId) {
+    if (!userId || !order) return false;
+    const buyerId = (order.buyer?._id || order.buyer?.id || order.buyer)?.toString();
+    return buyerId === userId;
+}
+
 export function isSellerOnOrder(order, userId) {
     if (!userId || !order) return false;
 
-    const buyerId = (order.buyer?._id || order.buyer?.id || order.buyer)?.toString();
-    if (buyerId === userId) return false;
+    if (isBuyerOnOrder(order, userId)) return false;
 
     const orderManId = (order.manufacturer?._id || order.manufacturer?.id || order.manufacturer)?.toString();
     if (orderManId === userId) return true;

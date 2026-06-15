@@ -21,6 +21,8 @@ router.get('/logs', getSystemLogs);
 router.get('/analytics', getAnalytics);
 router.get('/settings', require('../controllers/adminController').getSettings);
 router.put('/settings', require('../controllers/adminController').updateSettings);
+router.get('/contact-messages', require('../controllers/adminController').getContactMessages);
+router.post('/contact-messages/:id/reply', require('../controllers/adminController').replyContactMessage);
 
 // Admin product management
 router.get('/products', getProducts);

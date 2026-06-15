@@ -463,6 +463,17 @@ exports.createRefund = async (req, res, next) => {
             console.error('[payout] refund sync:', payoutErr.message);
         }
 
+        if (order.paymentMethod === 'platform_wallet') {
+            try {
+                const { refundEscrowForSeller } = require('../services/walletService');
+                for (const refund of refunds) {
+                    await refundEscrowForSeller(orderId, refund.seller, refund.refundAmount);
+                }
+            } catch (walletErr) {
+                console.error('[wallet] admin refund wallet sync:', walletErr.message);
+            }
+        }
+
         const totalCommissionRefunded = refunds.reduce((sum, r) => sum + (r.commissionRefunded || 0), 0);
         const totalRefundAmount = refunds.reduce((sum, r) => sum + (r.refundAmount || 0), 0);
         await reverseOrderPaymentTransactions(order, totalCommissionRefunded, totalRefundAmount);

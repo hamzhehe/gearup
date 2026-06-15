@@ -24,6 +24,19 @@ import { useAuth } from '@/context/AuthContext';
 import InvoiceModal from '@/components/shared/InvoiceModal';
 import DisputeModal from '@/components/disputes/DisputeModal';
 import DisputeResolutionCard from '@/components/disputes/DisputeResolutionCard';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
+import { isItemDisputeLocked } from '@/lib/financeUtils';
+import { subscribeFinancialSync } from '@/lib/financialSync';
+
+const DISPUTABLE_ORDER_STATUSES = ['processing', 'shipped', 'delivered', 'completed'];
+
+function getOrderItemProductId(item) {
+    return String(item?.product?._id || item?.product || '');
+}
+
+function getOrderItemSellerId(item) {
+    return String(item?.seller?._id || item?.seller || '');
+}
 
 function buildOrderTracking(o) {
     if (o.trackingLog?.length) {
@@ -46,7 +59,7 @@ function buildOrderTracking(o) {
             { label: 'Wallet Payment', completed: verified, date: verified ? o.createdAt : null },
             { label: 'Processing', completed: ['processing', 'shipped', 'delivered', 'completed'].includes(st), date: at(['processing', 'shipped', 'delivered', 'completed']) },
             { label: 'Shipped', completed: ['shipped', 'delivered', 'completed'].includes(st), date: at(['shipped', 'delivered', 'completed']) },
-            { label: 'Delivered', completed: ['delivered', 'completed'].includes(st), date: at(['delivered', 'completed']) }
+            { label: 'Received', completed: ['delivered', 'completed'].includes(st), date: at(['delivered', 'completed']) }
         ];
     }
 
@@ -55,7 +68,7 @@ function buildOrderTracking(o) {
         { label: 'Payment Verified', completed: verified, date: verified ? (o.updatedAt || o.createdAt) : null },
         { label: 'Processing', completed: ['processing', 'shipped', 'delivered', 'completed'].includes(st), date: at(['processing', 'shipped', 'delivered', 'completed']) },
         { label: 'Shipped', completed: ['shipped', 'delivered', 'completed'].includes(st), date: at(['shipped', 'delivered', 'completed']) },
-        { label: 'Delivered', completed: ['delivered', 'completed'].includes(st), date: at(['delivered', 'completed']) }
+        { label: 'Received', completed: ['delivered', 'completed'].includes(st), date: at(['delivered', 'completed']) }
     ];
 }
 
@@ -71,6 +84,7 @@ const WholesalerOrderDetailsPage = ({ params }) => {
     const [showInvoice, setShowInvoice] = useState(false);
     const [allOrders, setAllOrders] = useState([]);
     const [showDispute, setShowDispute] = useState(false);
+    const [disputeItem, setDisputeItem] = useState(null);
     const [orderDisputes, setOrderDisputes] = useState([]);
 
     const fetchOrder = useCallback(async () => {
@@ -115,8 +129,12 @@ const WholesalerOrderDetailsPage = ({ params }) => {
 
                 const mappedOrder = {
                     _id: o._id || '',
+                    buyerId: String(o.buyer?._id || o.buyer || ''),
                     product: o.items?.[0]?.product?.name || o.items?.[0]?.name || 'Bulk Order',
-                    items: o.items || [],
+                    items: (o.items || []).map((item) => ({
+                        ...item,
+                        disputeStatus: item.disputeStatus || 'none',
+                    })),
                     quantity: o.items?.reduce((acc, i) => acc + (i.quantity || 0), 0) || 0,
                     unitPrice: o.items?.[0]?.price || 0,
                     total: o.totalAmount || 0,
@@ -169,6 +187,13 @@ const WholesalerOrderDetailsPage = ({ params }) => {
     useEffect(() => {
         if (id) fetchOrderDisputes();
     }, [id, fetchOrderDisputes]);
+
+    useEffect(() => {
+        return subscribeFinancialSync(() => {
+            fetchOrderDisputes();
+            fetchOrder();
+        });
+    }, [fetchOrderDisputes, fetchOrder]);
 
     useEffect(() => {
         const fetchAllOrders = async () => {
@@ -248,6 +273,81 @@ const WholesalerOrderDetailsPage = ({ params }) => {
     }
 
     const statusConfig = getStatusConfig(order.status);
+    const currentUserId = String(user?.id || user?._id || '');
+    const isOrderBuyer = Boolean(currentUserId && order.buyerId === currentUserId);
+
+    const canDisputeItems = isOrderBuyer && DISPUTABLE_ORDER_STATUSES.includes(order.status?.toLowerCase());
+
+    const getItemDisputeRecord = (item) => {
+        const productId = getOrderItemProductId(item);
+        return orderDisputes.find(
+            (d) => String(d.product?._id || d.product || '') === productId
+        );
+    };
+
+    const getItemDisputeStatus = (item) => {
+        const dbStatus = (item.disputeStatus || 'none').toLowerCase();
+        if (dbStatus && dbStatus !== 'none') return dbStatus;
+        return getItemDisputeRecord(item)?.status?.toLowerCase() || 'none';
+    };
+
+    const canFileDisputeForItem = (item) => {
+        if (!canDisputeItems) return false;
+        return !isItemDisputeLocked(getItemDisputeStatus(item));
+    };
+
+    const getItemStatusPresentation = (item) => {
+        const status = getItemDisputeStatus(item);
+        if (status === 'open' || ['awaiting_seller', 'seller_responded', 'under_review', 'investigating'].includes(status)) {
+            return { label: 'Disputed', className: 'text-rose-600 bg-rose-50 border-rose-100' };
+        }
+        if (status === 'settled' || status === 'refunded') {
+            return { label: 'Refunded', className: 'text-emerald-700 bg-emerald-50 border-emerald-100' };
+        }
+        if (status === 'rejected') {
+            return { label: 'Dispute Denied', className: 'text-slate-600 bg-slate-50 border-slate-200' };
+        }
+        if (status === 'resolved') {
+            return { label: 'Dispute Closed', className: 'text-slate-600 bg-slate-50 border-slate-200' };
+        }
+        const orderStatus = order.status?.toLowerCase();
+        if (orderStatus === 'delivered') {
+            return { label: 'Delivered', className: 'text-emerald-700 bg-emerald-50 border-emerald-100' };
+        }
+        if (orderStatus === 'completed') {
+            return { label: 'Completed', className: 'text-emerald-700 bg-emerald-50 border-emerald-100' };
+        }
+        return { label: order.status, className: 'text-emerald-700 bg-emerald-50 border-emerald-100' };
+    };
+
+    const refreshDisputeState = () => {
+        fetchOrderDisputes();
+        fetchOrder();
+    };
+
+    const openDisputeForItem = (item) => {
+        const productId = getOrderItemProductId(item);
+        const sellerId = getOrderItemSellerId(item);
+        const sellerName =
+            item.seller?.name ||
+            item.seller?.businessDetails?.companyName ||
+            order.sellers.find((s) => s.id === sellerId)?.name ||
+            'Seller';
+
+        setDisputeItem({
+            productId,
+            name: item.product?.name || item.name || 'Order item',
+            image: resolveProductImageUrl(item.product?.images?.[0] || item.image),
+            sellerId,
+            sellerName,
+        });
+        setShowDispute(true);
+    };
+
+    const closeDisputeModal = () => {
+        setShowDispute(false);
+        setDisputeItem(null);
+    };
 
     const getPaymentLabel = () => {
         if (order.paymentMethod === 'platform_wallet') {
@@ -293,16 +393,6 @@ const WholesalerOrderDetailsPage = ({ params }) => {
                             <CheckCircle2 size={16} /> Confirm Delivery
                         </button>
                     )}
-                    {order && ['processing', 'shipped', 'delivered', 'completed'].includes(order.status?.toLowerCase()) &&
-                        !orderDisputes.some((d) => !['refunded', 'rejected', 'resolved'].includes(d.status)) && (
-                        <button
-                            type="button"
-                            onClick={() => setShowDispute(true)}
-                            className="group flex items-center gap-2 p-2 px-4 bg-white border border-rose-100 rounded-2xl text-rose-500 hover:text-white hover:bg-rose-500 transition-all font-body font-bold text-xs uppercase tracking-widest shadow-sm cursor-pointer"
-                        >
-                            <AlertCircle size={16} /> Report Issue
-                        </button>
-                    )}
                 </div>
 
                 <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl">
@@ -317,7 +407,7 @@ const WholesalerOrderDetailsPage = ({ params }) => {
                     <div className="flex-1">
                         <div className="flex items-center gap-3 mb-4">
                             <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${statusConfig.color}`}>
-                                {order.status}
+                                {order.status?.toLowerCase() === 'delivered' ? 'Received' : order.status}
                             </div>
                             <span className="font-mono text-xs text-slate-300 font-bold tracking-tighter uppercase italic">Ref: {order._id}</span>
                         </div>
@@ -393,20 +483,41 @@ const WholesalerOrderDetailsPage = ({ params }) => {
                         </div>
 
                         <div className="space-y-3">
-                            {order.items.map((item, i) => (
-                                <div key={i} className="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center font-heading font-black text-xs text-slate-400">
-                                            {String(i + 1).padStart(2, '0')}
+                            {order.items.map((item, i) => {
+                                const itemStatus = getItemStatusPresentation(item);
+
+                                return (
+                                <div key={getOrderItemProductId(item) || i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-14 h-14 rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shrink-0">
+                                            <img
+                                                src={resolveProductImageUrl(item.product?.images?.[0] || item.image)}
+                                                alt={item.product?.name || item.name || 'Order item'}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <div className="font-heading font-bold text-slate-900 text-sm">{item.product?.name || item.name}</div>
                                             <div className="font-body text-[10px] text-slate-400 font-black uppercase tracking-widest">{item.quantity} {item.bulkUnit === 'Dozen' ? (item.quantity > 1 ? 'Dozens' : 'Dozen') : (item.bulkUnit || 'Pack') + (item.quantity > 1 ? 's' : '')} x PKR {item.price?.toLocaleString()}</div>
+                                            <span className={`inline-flex mt-2 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${itemStatus.className}`}>
+                                                {itemStatus.label}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="font-heading font-black text-slate-900">PKR {(item.quantity * item.price).toLocaleString()}</div>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <div className="font-heading font-black text-slate-900">PKR {(item.quantity * item.price).toLocaleString()}</div>
+                                        {canFileDisputeForItem(item) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openDisputeForItem(item)}
+                                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-rose-100 rounded-2xl text-rose-500 hover:text-white hover:bg-rose-500 transition-all font-body font-bold text-[10px] uppercase tracking-widest shadow-sm"
+                                            >
+                                                <AlertCircle size={14} /> File Dispute
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
                     </div>
                 </div>
@@ -420,7 +531,7 @@ const WholesalerOrderDetailsPage = ({ params }) => {
                             key={d._id}
                             dispute={d}
                             role="buyer"
-                            onRefresh={fetchOrderDisputes}
+                            onRefresh={refreshDisputeState}
                         />
                     ))}
                 </div>
@@ -451,13 +562,14 @@ const WholesalerOrderDetailsPage = ({ params }) => {
                     ))}
                 </div>
             </div>
-            {showDispute && order && (
+            {showDispute && order && disputeItem && (
                 <DisputeModal
                     order={order}
-                    onClose={() => setShowDispute(false)}
+                    disputeItem={disputeItem}
+                    onClose={closeDisputeModal}
                     onSuccess={() => {
-                        alert('Issue reported. The seller and GearUp admin were notified. Check notifications for updates.');
-                        setShowDispute(false);
+                        alert('Issue reported for this item. The seller and GearUp admin were notified. Check notifications for updates.');
+                        closeDisputeModal();
                         fetchOrder();
                         fetchOrderDisputes();
                     }}

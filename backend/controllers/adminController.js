@@ -278,13 +278,15 @@ exports.updateVerificationNotes = async (req, res, next) => {
 // @access  Private/Admin
 exports.blockUser = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id);
+        const { reason } = req.body;
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { isBlocked: true, blockReason: reason || '' },
+            { new: true, runValidators: false }
+        );
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
-        
-        user.isBlocked = true;
-        await user.save();
         
         await AuditLog.create({
             action: 'Block user',
@@ -295,6 +297,7 @@ exports.blockUser = async (req, res, next) => {
 
         res.status(200).json({ success: true, data: user });
     } catch (error) {
+        console.error('[AdminController] blockUser error:', error);
         res.status(500).json({ success: false, error: 'Server error blocking user' });
     }
 };
@@ -304,13 +307,14 @@ exports.blockUser = async (req, res, next) => {
 // @access  Private/Admin
 exports.unblockUser = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { isBlocked: false, $unset: { blockReason: '' } },
+            { new: true, runValidators: false }
+        );
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
-        
-        user.isBlocked = false;
-        await user.save();
         
         await AuditLog.create({
             action: 'Unblock user',
@@ -321,6 +325,7 @@ exports.unblockUser = async (req, res, next) => {
 
         res.status(200).json({ success: true, data: user });
     } catch (error) {
+        console.error('[AdminController] unblockUser error:', error);
         res.status(500).json({ success: false, error: 'Server error unblocking user' });
     }
 };
@@ -535,4 +540,66 @@ exports.markPayoutAsPaid = async (req, res, next) => {
     }
 };
 
+// @desc    Get all contact messages
+// @route   GET /api/admin/contact-messages
+// @access  Private/Admin
+exports.getContactMessages = async (req, res, next) => {
+    try {
+        const ContactSubmission = require('../models/ContactSubmission');
+        const messages = await ContactSubmission.find().sort({ createdAt: -1 });
+        res.status(200).json({ success: true, count: messages.length, data: messages });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Server error retrieving contact messages' });
+    }
+};
 
+exports.replyContactMessage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { replyMessage } = req.body;
+
+        if (!replyMessage || !replyMessage.trim()) {
+            return res.status(400).json({ success: false, error: 'Reply message cannot be empty' });
+        }
+
+        const ContactSubmission = require('../models/ContactSubmission');
+        const sendEmail = require('../utils/sendEmail');
+
+        const submission = await ContactSubmission.findById(id);
+        if (!submission) {
+            return res.status(404).json({ success: false, error: 'Contact message not found' });
+        }
+
+        // Send Email
+        const emailHtml = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
+                <h2 style="color: #0F172A;">GearUp Support</h2>
+                <p>Hi ${submission.name},</p>
+                <p>Thank you for reaching out to us. An administrator has responded to your inquiry:</p>
+                <div style="background-color: #F8FAFC; padding: 16px; border-left: 4px solid #00A878; margin: 20px 0;">
+                    <p style="margin: 0; white-space: pre-wrap;">${replyMessage}</p>
+                </div>
+                <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
+                <p style="font-size: 14px; color: #64748B;">Your Original Message:</p>
+                <blockquote style="font-size: 14px; color: #64748B; font-style: italic; border-left: 2px solid #E5E7EB; padding-left: 12px; margin-left: 0;">
+                    ${submission.message}
+                </blockquote>
+                <p style="margin-top: 32px; font-size: 12px; color: #94A3B8;">GearUp B2B Marketplace &copy; ${new Date().getFullYear()}</p>
+            </div>
+        `;
+
+        await sendEmail({
+            email: submission.email,
+            subject: `Re: Your Inquiry to GearUp (${submission.type})`,
+            html: emailHtml
+        });
+
+        submission.isReplied = true;
+        await submission.save();
+
+        res.json({ success: true, message: 'Reply sent successfully' });
+    } catch (error) {
+        console.error('Error replying to contact message:', error);
+        res.status(500).json({ success: false, error: 'Failed to send reply' });
+    }
+};

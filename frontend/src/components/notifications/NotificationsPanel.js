@@ -224,6 +224,7 @@ export default function NotificationsPanel({ compact = false }) {
                 setNotifications((prev) =>
                     prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
                 );
+                window.dispatchEvent(new CustomEvent('notifications-read'));
             }
         } catch (err) {
             console.error(err);
@@ -233,6 +234,7 @@ export default function NotificationsPanel({ compact = false }) {
     const markAllAsRead = async () => {
         const unread = notifications.filter((n) => !n.isRead);
         await Promise.all(unread.map((n) => markAsRead(n._id)));
+        window.dispatchEvent(new CustomEvent('notifications-read'));
     };
 
     if (loading) {

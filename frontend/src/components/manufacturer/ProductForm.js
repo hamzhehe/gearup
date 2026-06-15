@@ -2,13 +2,13 @@
 
 import { getApiBaseUrl } from '@/lib/api';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Save,
     AlertCircle,
     Upload,
-    DollarSign,
+    Banknote,
     Info,
     Layers,
     ChevronLeft,
@@ -45,6 +45,21 @@ import {
 } from '@/lib/skuGenerator';
 
 const DEFAULT_PRIMARY_COVER = '/images/ca-plus-15000-primary-cover.png';
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+function validateProductImageFile(file) {
+    if (!file) {
+        return 'Please select an image file.';
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        return 'Only JPEG, PNG, and WEBP images are allowed.';
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        return 'Image file size must be less than 5MB.';
+    }
+    return null;
+}
 
 async function uploadProductImageFile(file, token) {
     const payload = new FormData();
@@ -113,6 +128,8 @@ const ProductForm = ({ id }) => {
 
     const [imageUrlInput, setImageUrlInput] = useState('');
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [imageError, setImageError] = useState(null);
+    const fileInputRef = useRef(null);
     const [singleBatPrice, setSingleBatPrice] = useState('');
     const [brandName, setBrandName] = useState('');
     const [skuUniqueSuffix, setSkuUniqueSuffix] = useState(null);
@@ -160,27 +177,31 @@ const ProductForm = ({ id }) => {
 
     const validationErrors = getValidationErrors();
 
-    const processFiles = async (files) => {
+    const processFiles = async (files, inputEl = null) => {
         if (!files || files.length === 0) return;
 
         const file = files[0];
-        if (!file.type.startsWith('image/')) {
-            setError('Please upload a valid image file');
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            setError('Image file size must be less than 5MB');
+        const validationMessage = validateProductImageFile(file);
+        if (validationMessage) {
+            setImageError(validationMessage);
+            const target = inputEl || fileInputRef.current;
+            if (target) {
+                target.value = '';
+            }
             return;
         }
 
         const token = localStorage.getItem('token');
         if (!token) {
-            setError('Session expired. Please sign in again.');
+            setImageError('Session expired. Please sign in again.');
+            const target = inputEl || fileInputRef.current;
+            if (target) {
+                target.value = '';
+            }
             return;
         }
 
-        setError(null);
+        setImageError(null);
         setUploadingImage(true);
 
         try {
@@ -189,6 +210,10 @@ const ProductForm = ({ id }) => {
                 ...prev,
                 images: [filePath],
             }));
+            const target = inputEl || fileInputRef.current;
+            if (target) {
+                target.value = '';
+            }
         } catch (err) {
             setError(err.message || 'Could not upload image. Please try again.');
         } finally {
@@ -760,12 +785,12 @@ const ProductForm = ({ id }) => {
                                 onClick={() => document.getElementById('file-upload-input').click()}
                             >
                                 <input
+                                    ref={fileInputRef}
                                     id="file-upload-input"
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/jpeg,image/png,image/webp"
                                     onChange={(e) => {
-                                        processFiles(e.target.files);
-                                        e.target.value = '';
+                                        processFiles(e.target.files, e.target);
                                     }}
                                     className="hidden"
                                 />
@@ -782,10 +807,16 @@ const ProductForm = ({ id }) => {
                                         <p className="text-[15px] font-[500] text-[#334155]">
                                             Drag & drop your primary cover image or <span className="text-[#00A878] font-[600]">click to upload</span>
                                         </p>
-                                        <p className="text-[12px] text-[#94A3B8] mt-2 font-[500]">One primary cover only • JPEG or PNG • Max 5MB</p>
+                                        <p className="text-[12px] text-[#94A3B8] mt-2 font-[500]">One primary cover only • JPEG, PNG, or WEBP • Max 5MB</p>
                                     </>
                                 )}
                             </div>
+
+                            {imageError && (
+                                <p className="text-[#EF4444] text-[11px] font-[500] flex items-center gap-1.5">
+                                    <AlertCircle size={12} /> {imageError}
+                                </p>
+                            )}
 
                             {/* Manual URL Input Option */}
                             <div className="flex flex-col sm:flex-row gap-3 items-center">
@@ -925,7 +956,7 @@ const ProductForm = ({ id }) => {
                     <div className="bg-[#FFFFFF] p-6 rounded-[20px] border border-[#E5E7EB] space-y-5" style={{ boxShadow: '0 6px 20px rgba(15,23,42,0.04)' }}>
                         <div className="flex items-center gap-3 border-b border-[#F1F5F9] pb-4">
                             <div className="w-10 h-10 rounded-[12px] bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-center text-[#64748B]">
-                                <DollarSign size={18} />
+                                <Banknote size={18} />
                             </div>
                             <h3 className="font-sans text-[20px] sm:text-[24px] font-[700] text-[#0F172A] tracking-tight">Bulk Wholesale Details</h3>
                         </div>

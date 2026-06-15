@@ -14,11 +14,11 @@ const REASON_OPTIONS = [
     { value: 'other', label: 'Other' }
 ];
 
-export default function DisputeModal({ order, onClose, onSuccess }) {
+export default function DisputeModal({ order, disputeItem, onClose, onSuccess }) {
     const [reason, setReason] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [notes, setNotes] = useState('');
-    const [sellerId, setSellerId] = useState(order?.sellers?.[0]?.id || '');
+    const [sellerId, setSellerId] = useState(disputeItem?.sellerId || order?.sellers?.[0]?.id || '');
     const [images, setImages] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -37,10 +37,14 @@ export default function DisputeModal({ order, onClose, onSuccess }) {
     }, []);
 
     useEffect(() => {
+        if (disputeItem?.sellerId) {
+            setSellerId(disputeItem.sellerId);
+            return;
+        }
         if (order?.sellers?.[0]?.id) {
             setSellerId(order.sellers[0].id);
         }
-    }, [order]);
+    }, [order, disputeItem]);
 
     const uploadFile = async (file) => {
         const token = localStorage.getItem('token');
@@ -92,7 +96,11 @@ export default function DisputeModal({ order, onClose, onSuccess }) {
             setError('Select which seller this dispute is about.');
             return;
         }
-        const resolvedSellerId = sellerId || sellers[0]?.id;
+        if (!disputeItem?.productId) {
+            setError('Could not determine which item to dispute. Please refresh and try again.');
+            return;
+        }
+        const resolvedSellerId = sellerId || disputeItem?.sellerId || sellers[0]?.id;
         if (!resolvedSellerId) {
             setError('Could not determine seller for this order. Please refresh and try again.');
             return;
@@ -110,9 +118,11 @@ export default function DisputeModal({ order, onClose, onSuccess }) {
                 },
                 body: JSON.stringify({
                     orderId: order._id,
+                    productId: disputeItem.productId,
                     sellerId: resolvedSellerId,
                     reason: finalReason,
                     notes,
+                    description: notes,
                     evidence: images[0],
                     evidenceImages: images
                 })
@@ -159,7 +169,7 @@ export default function DisputeModal({ order, onClose, onSuccess }) {
                             Report issue / refund
                         </h2>
                         <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                            Refunds apply to <strong>one seller&apos;s portion</strong> on this order. Upload photos of damaged or wrong items — admin and seller will both see them.
+                            You are disputing a <strong>single line item</strong> on this order. Upload photos of damaged or wrong items — admin and seller will both see them.
                         </p>
                     </div>
                     <button
@@ -173,7 +183,29 @@ export default function DisputeModal({ order, onClose, onSuccess }) {
 
                 <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
                     <div className="p-6 pt-4 space-y-4 overflow-y-auto flex-1">
-                        {sellers.length > 1 && (
+                        {disputeItem && (
+                            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-white shrink-0">
+                                    {disputeItem.image ? (
+                                        <img
+                                            src={disputeItem.image}
+                                            alt={disputeItem.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold uppercase text-slate-400">
+                                            No image
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="min-w-0">
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Disputing item</span>
+                                    <p className="font-heading font-bold text-slate-900 mt-1 truncate">{disputeItem.name}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {sellers.length > 1 && !disputeItem?.sellerId && (
                             <div>
                                 <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Seller</label>
                                 <select
@@ -190,10 +222,12 @@ export default function DisputeModal({ order, onClose, onSuccess }) {
                             </div>
                         )}
 
-                        {sellers.length === 1 && (
+                        {(sellers.length === 1 || disputeItem?.sellerId) && (
                             <div className="px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-sm">
                                 <span className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Seller</span>
-                                <p className="font-bold text-slate-800 mt-0.5">{sellers[0].name}</p>
+                                <p className="font-bold text-slate-800 mt-0.5">
+                                    {disputeItem?.sellerName || sellers.find((s) => s.id === sellerId)?.name || sellers[0]?.name}
+                                </p>
                             </div>
                         )}
 

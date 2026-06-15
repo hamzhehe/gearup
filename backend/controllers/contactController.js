@@ -19,7 +19,7 @@ exports.submitContact = async (req, res) => {
             return res.status(400).json({ success: false, error: 'Message is required' });
         }
 
-        const allowedTypes = ['general', 'sales', 'support', 'demo'];
+        const allowedTypes = ['general', 'verification', 'sales', 'support', 'advertising', 'other', 'demo'];
         const inquiryType = allowedTypes.includes(type) ? type : 'general';
 
         await ContactSubmission.create({

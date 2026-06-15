@@ -4,16 +4,17 @@ import React, { useMemo } from 'react';
 import { Banknote, ShoppingCart, Activity, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Skeleton from '@/components/common/Skeleton';
-import { formatPKR, getPurchaseMetrics, getSalesMetrics } from '@/lib/financeUtils';
+import { formatPKR, getUserFinancialMetrics } from '@/lib/financeUtils';
 import { isOrderInTimeRange } from '@/lib/dashboardUtils';
 import { resolveUserId } from '@/lib/dashboardAnalytics';
 
-const FinancialInsights = ({ orders = [], user, timeRange, loading = false }) => {
+const FinancialInsights = ({ orders = [], user, timeRange, loading = false, refundRecords = [] }) => {
     const kpiData = useMemo(() => {
         const filtered = orders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange));
         const userId = resolveUserId(user);
-        const { totalRevenue: totalSalesVal, totalSalesCount } = getSalesMetrics(filtered, userId);
-        const { totalPurchasesAmount: totalPurchasesVal } = getPurchaseMetrics(filtered, userId);
+        const financials = getUserFinancialMetrics(filtered, userId, refundRecords, timeRange);
+        const totalSalesVal = financials.totalRevenue;
+        const totalPurchasesVal = financials.totalSpend;
 
         return [
             {
@@ -41,7 +42,7 @@ const FinancialInsights = ({ orders = [], user, timeRange, loading = false }) =>
                 href: '/manufacturer/analytics?tab=profit'
             }
         ];
-    }, [orders, timeRange, user]);
+    }, [orders, timeRange, user, refundRecords]);
 
     if (loading) {
         return (

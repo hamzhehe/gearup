@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  CircleDollarSign,
+  Banknote,
   Percent,
   Megaphone,
   AlertTriangle,
@@ -30,7 +30,7 @@ export default function AdminRevenueOverview({ metrics, trends = {} }) {
           featured
           label="Total Revenue"
           value={formatPKR(totalRevenue)}
-          icon={CircleDollarSign}
+          icon={Banknote}
           trend={trends.monthlyRevenue}
           context="Combined platform revenue across all channels"
         />

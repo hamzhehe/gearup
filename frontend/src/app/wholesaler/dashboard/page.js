@@ -2,12 +2,13 @@
 
 import { getApiBaseUrl } from '@/lib/api';
 import { isOrderInTimeRange, OPEN_DISPUTE_STATUSES } from '@/lib/dashboardUtils';
-import { isChartEligiblePurchaseOrder } from '@/lib/dashboardAnalytics';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { formatPKR } from '@/lib/financeUtils';
+import { formatPKR, buildRefundRecordsFromDisputes, getUserFinancialMetrics } from '@/lib/financeUtils';
+import { subscribeFinancialSync } from '@/lib/financialSync';
+import { isSellerOnOrder, isBuyerOnOrder, isCompletedSaleOrder, resolveUserId } from '@/lib/dashboardAnalytics';
 import {
     ShoppingCart,
     Banknote,
@@ -33,9 +34,7 @@ import VerificationStatusBanner from '@/components/shared/VerificationStatusBann
 import { getVerificationDisplayState } from '@/lib/verificationStats';
 import { AD_SYSTEM_ENABLED } from '@/lib/advertisingConfig';
 
-const SponsoredProducts = AD_SYSTEM_ENABLED
-  ? dynamic(() => import('@/components/ads/SponsoredProducts'), { ssr: false })
-  : () => null;
+
 
 const PremiumAnalyticsSection = dynamic(() => import('@/components/dashboard/PremiumAnalyticsSection'), { ssr: false, loading: () => <Skeleton variant="chart" /> });
 const CategoryShareChart = dynamic(() => import('@/components/dashboard/CategoryShareChart'), { ssr: false, loading: () => <Skeleton variant="chart" /> });
@@ -60,43 +59,59 @@ export default function WholesalerDashboard() {
     const [walletBalance, setWalletBalance] = useState(null);
     const [loading, setLoading] = useState(true);
     const [openIssueCount, setOpenIssueCount] = useState(0);
+    const [refundRecords, setRefundRecords] = useState([]);
 
-    const fetchDashboardData = useCallback(async () => {
+    const fetchDashboardData = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const token = localStorage.getItem('token');
             const headers = { Authorization: `Bearer ${token}` };
             const base = getApiBaseUrl();
 
-            const [ordersRes, productsRes, walletRes, mineDisputesRes] = await Promise.all([
+            const [ordersRes, productsRes, walletRes, mineDisputesRes, sellerDisputesRes] = await Promise.all([
                 fetch(`${base}/api/orders`, { headers }),
                 fetch(`${base}/api/products`, { headers }),
                 fetch(`${base}/api/wallet/me`, { headers }),
-                fetch(`${base}/api/disputes/mine`, { headers })
+                fetch(`${base}/api/disputes/mine`, { headers }),
+                fetch(`${base}/api/disputes/seller`, { headers }),
             ]);
 
             const ordersData = await ordersRes.json();
             const productsData = await productsRes.json();
             const walletData = await walletRes.json();
             const disputesData = await mineDisputesRes.json();
+            const sellerDisputesData = await sellerDisputesRes.json();
 
             if (ordersData.success) setOrders(ordersData.data || []);
             if (productsData.success) setMarketProducts(productsData.data || []);
             if (walletData.success) setWalletBalance(walletData.data.balance ?? 0);
-            if (disputesData.success) {
-                setOpenIssueCount(
-                    (disputesData.data || []).filter((d) => OPEN_DISPUTE_STATUSES.includes(d.status)).length
-                );
-            }
+
+            const allDisputes = [
+                ...(disputesData.success ? disputesData.data || [] : []),
+                ...(sellerDisputesData.success ? sellerDisputesData.data || [] : []),
+            ];
+            const uniqueDisputes = Array.from(
+                new Map(allDisputes.map((d) => [String(d._id || d.id), d])).values()
+            );
+            setRefundRecords(buildRefundRecordsFromDisputes(uniqueDisputes));
+            setOpenIssueCount(
+                uniqueDisputes.filter((d) => OPEN_DISPUTE_STATUSES.includes(d.status)).length
+            );
         } catch (err) {
             console.error('Failed to fetch dashboard data:', err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
         fetchDashboardData();
+    }, [fetchDashboardData]);
+
+    useEffect(() => {
+        return subscribeFinancialSync(() => {
+            fetchDashboardData(true);
+        });
     }, [fetchDashboardData]);
 
     useEffect(() => {
@@ -125,21 +140,22 @@ export default function WholesalerDashboard() {
         setTimeout(() => setFiltering(false), 550);
     };
 
-    const uid = (user?.id || user?._id)?.toString();
+    const uid = resolveUserId(user);
 
     const purchaseOrders = useMemo(() => {
-        return orders.filter((o) => (o.buyer?._id || o.buyer)?.toString() === uid);
+        return orders.filter((o) => isBuyerOnOrder(o, uid));
+    }, [orders, uid]);
+
+    const salesOrders = useMemo(() => {
+        return orders.filter((o) => isSellerOnOrder(o, uid));
     }, [orders, uid]);
 
     const stats = useMemo(() => {
         const filtered = purchaseOrders.filter((o) => isOrderInTimeRange(o.createdAt, timeRange));
         const activeOrders = filtered.filter((o) => !['delivered', 'cancelled', 'completed'].includes((o.status || '').toLowerCase())).length;
-        const totalSpend = filtered.reduce((sum, o) => {
-            if (isChartEligiblePurchaseOrder(o, uid)) {
-                return sum + (o.totalAmount || 0);
-            }
-            return sum;
-        }, 0);
+        const financials = getUserFinancialMetrics(orders, uid, refundRecords, timeRange);
+        const totalSpend = financials.totalSpend;
+        const totalRevenue = financials.totalRevenue;
         const supplierIds = new Set();
         filtered.forEach((o) => {
             (o.items || []).forEach((item) => {
@@ -147,10 +163,10 @@ export default function WholesalerDashboard() {
                 if (sid) supplierIds.add(sid);
             });
         });
-        const deliveredOrders = filtered.filter((o) => {
+        const deliveredOrders = salesOrders.filter((o) => isCompletedSaleOrder(o, uid)).length;
+        const receivedProducts = purchaseOrders.filter((o) => {
             const globalStatus = (o.status || '').toLowerCase();
-            if (['delivered', 'completed'].includes(globalStatus)) return true;
-            return o.sellerStats?.some(s => ['delivered', 'completed'].includes((s.status || '').toLowerCase()));
+            return ['delivered', 'completed'].includes(globalStatus);
         }).length;
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -163,13 +179,15 @@ export default function WholesalerDashboard() {
         return {
             activeOrders,
             totalSpend,
+            totalRevenue,
             activeSuppliers: supplierIds.size,
             orderCount: filtered.length,
             deliveredOrders,
+            receivedProducts,
             todaysOrders,
             pendingPayment
         };
-    }, [purchaseOrders, timeRange]);
+    }, [purchaseOrders, salesOrders, orders, timeRange, uid, refundRecords]);
 
     const timeLabel = useMemo(() => {
         const map = { today: 'vs yesterday', week: 'vs last week', month: 'vs last month', '6months': 'vs last 6 months', year: 'vs last year' };
@@ -460,11 +478,13 @@ export default function WholesalerDashboard() {
                 role="wholesaler"
                 data={{
                     totalSpend: stats.totalSpend,
-                    totalRevenue: 0,
+                    totalRevenue: stats.totalRevenue,
                     purchaseOrdersCount: stats.orderCount,
+                    salesOrdersCount: salesOrders.length,
                     activeOrders: stats.activeOrders,
                     walletBalance: walletBalance,
                     deliveredOrders: stats.deliveredOrders,
+                    receivedProducts: stats.receivedProducts,
                     todaysOrders: stats.todaysOrders,
                     pendingPayment: stats.pendingPayment
                 }}
@@ -477,17 +497,7 @@ export default function WholesalerDashboard() {
                 }}
             />
 
-            {AD_SYSTEM_ENABLED && (
-                <section className="flex flex-col space-y-8 dashboard-divider">
-                    <div className="w-full">
-                        <SponsoredProducts 
-                            placement="homepage_featured"
-                            title="Featured Marketplace Products"
-                            subtitle="Explore premium offerings from verified suppliers"
-                        />
-                    </div>
-                </section>
-            )}
+
 
             <section className="flex flex-col space-y-8 pt-8 dashboard-divider">
                 <div className="flex flex-col gap-2">
@@ -529,6 +539,7 @@ export default function WholesalerDashboard() {
                         user={user}
                         timeRange={timeRange}
                         loading={loading || filtering}
+                        refundRecords={refundRecords}
                     />
                 </div>
             </section>

@@ -268,7 +268,8 @@ exports.login = async (req, res, next) => {
 
         if (user.isBlocked) {
             console.log(`[AUTH] User blocked: ${email}`);
-            return res.status(401).json({ success: false, error: 'Your account has been blocked.' });
+            const reasonText = user.blockReason ? ` Reason: ${user.blockReason}` : '';
+            return res.status(401).json({ success: false, error: `Your account has been suspended.${reasonText} Please contact support@gearup.com or visit the Contact page for assistance.` });
         }
 
         // Check if password matches
@@ -723,7 +724,8 @@ exports.googleAuth = async (req, res, next) => {
                 await user.save();
             }
             if (user.isBlocked) {
-                return res.status(401).json({ success: false, error: 'Your account has been blocked.' });
+                const reasonText = user.blockReason ? ` Reason: ${user.blockReason}` : '';
+                return res.status(401).json({ success: false, error: `Your account has been suspended.${reasonText} Please contact support@gearup.com or visit the Contact page for assistance.` });
             }
             sendTokenResponse(user, 200, res);
         } else {

@@ -121,7 +121,7 @@ async function processWalletPayment(order, buyerId) {
         const amount = Number(stat.sellerReceivable ?? stat.subtotal ?? 0);
         if (!sellerId || amount <= 0) continue;
 
-        const sellerWallet = await getOrCreateWallet(sellerId, 'manufacturer');
+        const sellerWallet = await getOrCreateWallet(sellerId);
         sellerWallet.escrowBalance += amount;
         await sellerWallet.save();
 
@@ -157,7 +157,7 @@ async function releaseSingleEscrow(escrow, buyerId) {
         return { skipped: true, amount: 0 };
     }
 
-    const sellerWallet = await getOrCreateWallet(escrow.seller, 'manufacturer');
+    const sellerWallet = await getOrCreateWallet(escrow.seller);
     const amount = Number(escrow.amount) || 0;
 
     if (amount <= 0) {
@@ -257,21 +257,32 @@ async function releaseEscrowForSeller(orderId, sellerId) {
 }
 
 /**
- * Admin-approved partial refund for one seller's portion on a multi-seller order.
+ * Refund buyer and debit seller for one seller's portion (full or partial).
+ * @param {number|null|undefined} requestedAmount - Item/partial amount; defaults to full escrow.
  */
-async function refundEscrowForSeller(orderId, sellerId) {
+async function refundEscrowForSeller(orderId, sellerId, requestedAmount) {
     const escrow = await Escrow.findOne({ order: orderId, seller: sellerId });
 
     if (!escrow) {
         throw new Error('No escrow record found for this seller on this order.');
     }
     if (escrow.status === 'REFUNDED') {
-        return { alreadyRefunded: true, amount: escrow.amount };
+        return { alreadyRefunded: true, amount: 0 };
     }
 
-    const amount = Number(escrow.amount) || 0;
+    const escrowAmount = Number(escrow.amount) || 0;
+    let amount =
+        requestedAmount != null && requestedAmount !== undefined
+            ? Number(requestedAmount)
+            : escrowAmount;
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Invalid refund amount.');
+    }
+    amount = Math.min(amount, escrowAmount);
+
     const buyerId = escrow.buyer;
-    const sellerWallet = await getOrCreateWallet(sellerId, 'manufacturer');
+    const sellerWallet = await getOrCreateWallet(sellerId);
     const buyerWallet = await getOrCreateWallet(buyerId);
 
     if (escrow.status === 'RELEASED') {
@@ -281,7 +292,7 @@ async function refundEscrowForSeller(orderId, sellerId) {
         sellerWallet.balance -= amount;
     } else {
         if (sellerWallet.escrowBalance < amount) {
-            sellerWallet.escrowBalance = Math.max(0, sellerWallet.escrowBalance);
+            sellerWallet.escrowBalance = Math.max(0, sellerWallet.escrowBalance - amount);
         } else {
             sellerWallet.escrowBalance -= amount;
         }
@@ -291,8 +302,13 @@ async function refundEscrowForSeller(orderId, sellerId) {
     buyerWallet.balance += amount;
     await buyerWallet.save();
 
-    escrow.status = 'REFUNDED';
-    escrow.refundedAt = new Date();
+    if (amount >= escrowAmount) {
+        escrow.status = 'REFUNDED';
+        escrow.refundedAt = new Date();
+        escrow.amount = 0;
+    } else {
+        escrow.amount = escrowAmount - amount;
+    }
     await escrow.save();
 
     await WalletLedger.create({
@@ -303,7 +319,7 @@ async function refundEscrowForSeller(orderId, sellerId) {
         direction: 'debit',
         type: 'refund_issued',
         status: 'REFUNDED',
-        description: `Admin refund clawback order #${orderId.toString().slice(-6)}`
+        description: `Refund clawback order #${orderId.toString().slice(-6)}`
     });
 
     await WalletLedger.create({
@@ -337,7 +353,7 @@ async function refundOrderEscrow(orderId) {
     let refundTotal = 0;
 
     for (const escrow of escrows) {
-        const sellerWallet = await getOrCreateWallet(escrow.seller, 'manufacturer');
+        const sellerWallet = await getOrCreateWallet(escrow.seller);
         if (sellerWallet.escrowBalance >= escrow.amount) {
             sellerWallet.escrowBalance -= escrow.amount;
             await sellerWallet.save();

@@ -33,6 +33,7 @@ async function populateDispute(query) {
         .populate('order', 'totalAmount status paymentMethod createdAt')
         .populate('buyer', 'name email role businessDetails')
         .populate('seller', 'name email businessDetails')
+        .populate('product', 'name images')
         .populate('timeline.by', 'name role');
 }
 
@@ -49,17 +50,66 @@ async function notifyAdmins(message, link, excludeId) {
     }
 }
 
-function buyerOrderLink(orderId, buyerRole) {
-    return buyerRole === 'manufacturer'
-        ? `/wholesaler/orders/${orderId}`
-        : `/wholesaler/orders/${orderId}`;
+/** Full-order refund flags only — item-level disputes keep order revenue intact for net refund math. */
+async function applyDisputeRefundOrderState(order, dispute) {
+    if (!order) return;
+    if (dispute.product) return;
+
+    if (order.sellerStats?.length) {
+        const stat = order.sellerStats.find((s) => userId(s.seller) === userId(dispute.seller));
+        if (stat) stat.status = 'refunded';
+    }
+    order.paymentStatus = 'refunded';
+    order.status = order.status === 'completed' ? order.status : 'cancelled';
+    await order.save();
+}
+
+function resolveProductId(value) {
+    return (value?._id || value)?.toString() || null;
+}
+
+async function syncOrderItemDisputeStatus(orderOrId, productId, disputeStatus) {
+    if (!productId || !disputeStatus) return;
+    const order =
+        orderOrId?.items?.length
+            ? orderOrId
+            : await Order.findById(orderOrId);
+    if (!order?.items?.length) return;
+
+    const pid = String(productId);
+    const item = order.items.find((entry) => resolveProductId(entry.product) === pid);
+    if (!item) return;
+
+    item.disputeStatus = terminalDisputeItemStatus(disputeStatus);
+    await order.save();
+}
+
+async function processDisputeRefundWallets(order, dispute) {
+    const amount = Number(dispute.refundAmount) || 0;
+    if (amount <= 0) {
+        return { amount: 0 };
+    }
+    if (order?.paymentMethod !== 'platform_wallet') {
+        return { amount, walletSkipped: true };
+    }
+    return refundEscrowForSeller(order._id, dispute.seller, amount);
+}
+
+function buyerOrderLink(orderId) {
+    return `/wholesaler/orders/${orderId}`;
+}
+
+function terminalDisputeItemStatus(disputeStatus) {
+    if (disputeStatus === 'refunded') return 'settled';
+    if (['rejected', 'resolved'].includes(disputeStatus)) return 'settled';
+    return disputeStatus;
 }
 
 // @desc    Create dispute (buyer)
 // @route   POST /api/disputes
 exports.createDispute = async (req, res) => {
     try {
-        const { orderId, sellerId, reason, evidence, evidenceImages, notes } = req.body;
+        const { orderId, sellerId, productId, reason, evidence, evidenceImages, notes } = req.body;
         const buyerId = userId(req.user);
 
         const order = await Order.findById(orderId);
@@ -71,11 +121,18 @@ exports.createDispute = async (req, res) => {
             return res.status(403).json({ success: false, error: 'Not authorized' });
         }
 
-        if (!['wholesaler', 'manufacturer'].includes(req.user.role)) {
-            return res.status(403).json({ success: false, error: 'Only buyers can open disputes' });
+        if (!productId) {
+            return res.status(400).json({ success: false, error: 'Please select a specific order item to dispute.' });
         }
 
-        let targetSellerId = sellerId;
+        const disputedItem = (order.items || []).find(
+            (item) => userId(item.product) === String(productId)
+        );
+        if (!disputedItem) {
+            return res.status(400).json({ success: false, error: 'Selected product was not found on this order.' });
+        }
+
+        let targetSellerId = sellerId || userId(disputedItem.seller);
         if (!targetSellerId && order.sellerStats?.length === 1) {
             targetSellerId = order.sellerStats[0].seller;
         }
@@ -86,19 +143,29 @@ exports.createDispute = async (req, res) => {
             });
         }
 
+        if (userId(disputedItem.seller) !== String(targetSellerId)) {
+            return res.status(400).json({ success: false, error: 'Seller does not match the selected order item.' });
+        }
+
         const sellerStat = order.sellerStats.find((s) => userId(s.seller) === targetSellerId.toString());
         if (!sellerStat) {
             return res.status(400).json({ success: false, error: 'Seller not found on this order.' });
         }
 
-        const existingOpen = await Dispute.findOne({
+        const existingDispute = await Dispute.findOne({
             order: orderId,
             buyer: buyerId,
             seller: targetSellerId,
-            status: { $in: OPEN_STATUSES }
+            product: productId
         });
-        if (existingOpen) {
-            return res.status(400).json({ success: false, error: 'An open dispute already exists for this seller on this order.' });
+        if (existingDispute) {
+            const settled = ['refunded', 'rejected', 'resolved'].includes(existingDispute.status);
+            return res.status(400).json({
+                success: false,
+                error: settled
+                    ? 'This item dispute is already settled. You cannot file another dispute for this item.'
+                    : 'A dispute already exists for this item on this order.'
+            });
         }
 
         const images = [];
@@ -109,13 +176,17 @@ exports.createDispute = async (req, res) => {
             });
         }
 
-        const refundAmount = Number(sellerStat.sellerReceivable ?? sellerStat.subtotal ?? 0);
+        const itemSubtotal = Number(disputedItem.quantity || 0) * Number(disputedItem.price || 0);
+        const refundAmount = itemSubtotal > 0 ? itemSubtotal : Number(sellerStat.sellerReceivable ?? sellerStat.subtotal ?? 0);
         const shortId = orderShortId(order);
+        const itemLabel = disputedItem.name || 'order item';
 
         const dispute = await Dispute.create({
             order: orderId,
             buyer: buyerId,
             seller: targetSellerId,
+            product: productId,
+            orderItemName: itemLabel,
             reason,
             evidence: images[0],
             evidenceImages: images,
@@ -124,7 +195,7 @@ exports.createDispute = async (req, res) => {
             status: 'open',
             timeline: [{
                 action: 'opened',
-                message: `Buyer reported: ${reason}. ${notes || ''}`.trim(),
+                message: `Buyer reported issue for "${itemLabel}": ${reason}. ${notes || ''}`.trim(),
                 by: buyerId,
                 role: req.user.role,
                 visibleTo: 'all',
@@ -132,15 +203,10 @@ exports.createDispute = async (req, res) => {
             }]
         });
 
-        const transactions = await Transaction.find({ order: orderId, status: 'Pending' });
-        for (const tx of transactions) {
-            tx.status = 'Hold';
-            await tx.save();
-        }
+        await syncOrderItemDisputeStatus(order, productId, 'open');
 
-        const orderLink = buyerOrderLink(orderId, req.user.role);
-        const sellerMsg = `Issue reported on order #${shortId}: "${reason}". Please respond within 48 hours or admin may process a refund.`;
-        const adminMsg = `New dispute on order #${shortId} — ${reason} (PKR ${refundAmount.toLocaleString()}).`;
+        const sellerMsg = `Issue reported on order #${shortId} for "${itemLabel}": "${reason}". Please respond within 48 hours or admin may process a refund.`;
+        const adminMsg = `New item dispute on order #${shortId} — ${itemLabel} — ${reason} (PKR ${refundAmount.toLocaleString()}).`;
 
         await notifyUser(targetSellerId, sellerMsg, '/manufacturer/disputes');
         await notifyAdmins(adminMsg, '/admin/disputes', buyerId);
@@ -301,7 +367,7 @@ exports.sellerRespond = async (req, res) => {
         await dispute.save();
 
         const shortId = orderShortId(dispute.order);
-        await notifyUser(dispute.buyer, `Seller responded on dispute #${shortId}. Check your order for updates.`, buyerOrderLink(dispute.order._id, 'wholesaler'));
+        await notifyUser(dispute.buyer, `Seller responded on dispute #${shortId}. Check your order for updates.`, buyerOrderLink(dispute.order._id));
         await notifyAdmins(`Seller responded on dispute #${shortId}.`, '/admin/disputes', userId(req.user));
 
         const populated = await populateDispute(Dispute.findById(dispute._id));
@@ -330,7 +396,7 @@ exports.sellerRefund = async (req, res) => {
         const order = dispute.order;
         let refundResult = { amount: dispute.refundAmount };
         if (order?.paymentMethod === 'platform_wallet') {
-            refundResult = await refundEscrowForSeller(order._id, dispute.seller);
+            refundResult = await processDisputeRefundWallets(order, dispute);
         }
 
         if (message?.trim()) {
@@ -347,15 +413,8 @@ exports.sellerRefund = async (req, res) => {
         });
         await dispute.save();
 
-        if (order) {
-            if (order.sellerStats?.length) {
-                const stat = order.sellerStats.find((s) => userId(s.seller) === userId(dispute.seller));
-                if (stat) stat.status = 'refunded';
-            }
-            order.paymentStatus = 'refunded';
-            order.status = order.status === 'completed' ? order.status : 'cancelled';
-            await order.save();
-        }
+        await applyDisputeRefundOrderState(order, dispute);
+        await syncOrderItemDisputeStatus(order, dispute.product, 'refunded');
 
         try {
             const { markPayoutsRefundedForOrder } = require('../utils/payoutSync');
@@ -368,7 +427,7 @@ exports.sellerRefund = async (req, res) => {
         await notifyUser(
             dispute.buyer,
             `Refund of PKR ${(dispute.refundAmount || 0).toLocaleString()} issued for order #${shortId} (seller approved).`,
-            buyerOrderLink(order._id, 'wholesaler')
+            buyerOrderLink(order._id)
         );
         await notifyAdmins(`Seller refunded dispute #${shortId}.`, '/admin/disputes', userId(req.user));
 
@@ -414,7 +473,7 @@ exports.adminRequestSellerResponse = async (req, res) => {
         await notifyUser(
             dispute.buyer,
             `We asked the seller to respond to your claim on order #${shortId}. You will be updated soon.`,
-            buyerOrderLink(dispute.order._id, 'wholesaler')
+            buyerOrderLink(dispute.order._id)
         );
 
         const populated = await populateDispute(Dispute.findById(dispute._id));
@@ -453,7 +512,7 @@ exports.adminMessage = async (req, res) => {
 
         const shortId = orderShortId(dispute.order);
         const recipient = target === 'buyer' ? dispute.buyer : dispute.seller;
-        const link = target === 'buyer' ? buyerOrderLink(dispute.order._id, 'wholesaler') : '/manufacturer/disputes';
+        const link = target === 'buyer' ? buyerOrderLink(dispute.order._id) : '/manufacturer/disputes';
         await notifyUser(recipient, `GearUp support (order #${shortId}): ${message.trim()}`, link);
 
         const populated = await populateDispute(Dispute.findById(dispute._id));
@@ -489,6 +548,8 @@ exports.adminRejectDispute = async (req, res) => {
         });
         await dispute.save();
 
+        await syncOrderItemDisputeStatus(dispute.order, dispute.product, 'rejected');
+
         const transactions = await Transaction.find({ order: dispute.order._id, status: 'Hold' });
         for (const tx of transactions) {
             tx.status = 'Pending';
@@ -497,9 +558,9 @@ exports.adminRejectDispute = async (req, res) => {
 
         const shortId = orderShortId(dispute.order);
         if (messageToBuyer?.trim()) {
-            await notifyUser(dispute.buyer, `Dispute #${shortId}: ${messageToBuyer.trim()}`, buyerOrderLink(dispute.order._id, 'wholesaler'));
+            await notifyUser(dispute.buyer, `Dispute #${shortId}: ${messageToBuyer.trim()}`, buyerOrderLink(dispute.order._id));
         } else {
-            await notifyUser(dispute.buyer, `Your dispute on order #${shortId} was closed: ${dispute.resolution}`, buyerOrderLink(dispute.order._id, 'wholesaler'));
+            await notifyUser(dispute.buyer, `Your dispute on order #${shortId} was closed: ${dispute.resolution}`, buyerOrderLink(dispute.order._id));
         }
         if (messageToSeller?.trim()) {
             await notifyUser(dispute.seller, `Dispute #${shortId} closed in seller favor: ${messageToSeller.trim()}`, '/manufacturer/disputes');
@@ -531,7 +592,7 @@ exports.adminRefundDispute = async (req, res) => {
         const order = dispute.order;
         let refundResult = { amount: dispute.refundAmount };
         if (order?.paymentMethod === 'platform_wallet') {
-            refundResult = await refundEscrowForSeller(order._id, dispute.seller);
+            refundResult = await processDisputeRefundWallets(order, dispute);
         }
 
         dispute.status = 'refunded';
@@ -545,15 +606,8 @@ exports.adminRefundDispute = async (req, res) => {
         });
         await dispute.save();
 
-        if (order) {
-            if (order.sellerStats?.length) {
-                const stat = order.sellerStats.find((s) => userId(s.seller) === userId(dispute.seller));
-                if (stat) stat.status = 'refunded';
-            }
-            order.paymentStatus = 'refunded';
-            order.status = order.status === 'completed' ? order.status : 'cancelled';
-            await order.save();
-        }
+        await applyDisputeRefundOrderState(order, dispute);
+        await syncOrderItemDisputeStatus(order, dispute.product, 'refunded');
 
         try {
             const { markPayoutsRefundedForOrder } = require('../utils/payoutSync');
@@ -566,7 +620,7 @@ exports.adminRefundDispute = async (req, res) => {
         await notifyUser(
             dispute.buyer,
             `Refund approved: PKR ${(dispute.refundAmount || 0).toLocaleString()} for order #${shortId}.`,
-            buyerOrderLink(order._id, 'wholesaler')
+            buyerOrderLink(order._id)
         );
         await notifyUser(
             dispute.seller,
@@ -603,6 +657,7 @@ exports.updateDisputeStatus = async (req, res) => {
         await dispute.save();
 
         if (status === 'resolved' || status === 'rejected') {
+            await syncOrderItemDisputeStatus(dispute.order, dispute.product, status);
             const transactions = await Transaction.find({ order: dispute.order._id, status: 'Hold' });
             for (const tx of transactions) {
                 tx.status = 'Pending';

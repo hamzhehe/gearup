@@ -42,7 +42,12 @@ const OrderSchema = new mongoose.Schema({
                 type: Number, // Price per bulk unit
                 required: true
             },
-            bulkUnit: String
+            bulkUnit: String,
+            disputeStatus: {
+                type: String,
+                enum: ['none', 'open', 'settled', 'refunded', 'rejected', 'resolved'],
+                default: 'none'
+            }
         }
     ],
     sellerStats: [

@@ -11,7 +11,7 @@ import {
     PieChart, Pie, Cell, Legend
 } from 'recharts';
 import {
-    Package, DollarSign, AlertCircle, HeartPulse, TrendingUp, RefreshCw,
+    Package, Banknote, AlertCircle, HeartPulse, TrendingUp, RefreshCw,
     ShoppingCart, ArrowRight, Eye, ShieldAlert, CheckCircle2, Activity, Sparkles
 } from 'lucide-react';
 import { isSellerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
@@ -220,7 +220,7 @@ export default function InventoryOverviewPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
                     {[
                         { label: 'Total Products', value: totalProducts, icon: Package, color: 'text-purple-600', bg: 'bg-purple-50', link: '/manufacturer/products' },
-                        { label: 'Inventory Value', value: formatPKR(inventoryValue), icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50', link: '/manufacturer/analytics/profit' },
+                        { label: 'Inventory Value', value: formatPKR(inventoryValue), icon: Banknote, color: 'text-blue-600', bg: 'bg-blue-50', link: '/manufacturer/analytics/profit' },
                         { label: 'Low Stock Alerts', value: lowStockProducts.length + criticalStockProducts.length, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', link: '#low-stock' },
                         { label: 'Health Score', value: `${inventoryHealthPercentage}%`, icon: HeartPulse, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '#health' },
                         { label: 'Fast Moving', value: fastMovingProducts, icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/manufacturer/analytics/top-products' },

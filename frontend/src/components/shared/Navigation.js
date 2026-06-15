@@ -27,101 +27,129 @@ const Navigation = () => {
     };
 
     return (
-        <nav className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 ${isScrolled ? 'bg-white/98 backdrop-blur-lg shadow-md' : 'bg-white/95 backdrop-blur-sm'
+        <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled ? 'bg-white/85 backdrop-blur-xl border-b border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]' : 'bg-transparent'
             }`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-20">
-                    <Link href="/" className="flex flex-col">
-                        <span className="font-heading text-2xl font-bold text-primary-deep">GearUp</span>
-                        <span className="font-body text-[10px] font-medium text-neutral-600 uppercase tracking-widest">Empowering The Future of Sports Commerce</span>
-                    </Link>
+            <div className="w-full mx-auto px-4 sm:px-6 lg:px-10 2xl:px-12">
+                <div className="flex justify-between items-center h-20 md:h-[90px]">
+                    <div className="flex items-center">
+                        <Link href="/" className="flex items-center transition-transform duration-300 hover:scale-[1.03] active:scale-95 group">
+                            <img 
+                                src="/assets/images/gearup-logo-cropped.png" 
+                                alt="GearUp Logo" 
+                                className="h-[60px] md:h-[76px] -mt-1 md:-mt-2 w-auto object-contain transition-all duration-300 drop-shadow-sm group-hover:drop-shadow-md"
+                            />
+                        </Link>
+                        <div className="hidden md:flex items-center ml-4 md:ml-6 pl-4 md:pl-6 border-l-2 border-slate-300/70 h-14 md:h-16">
+                            <div className="flex flex-col justify-center gap-[3px]">
+                                <span className="text-[12px] md:text-[14px] font-extrabold tracking-[0.2em] uppercase bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent drop-shadow-sm">
+                                    Empowering the Future
+                                </span>
+                                <span className="text-[10px] md:text-[12px] font-semibold tracking-[0.25em] text-slate-500/90 uppercase">
+                                    Of E-Commerce
+                                </span>
+                            </div>
+                        </div>
+                    </div>
 
                     <button
-                        className="md:hidden p-2"
+                        className="md:hidden p-2 text-slate-800 hover:text-emerald-600 transition-colors"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                         aria-label="Toggle menu"
                     >
-                        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                        {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
                     </button>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex desktop-auth-menu items-center space-x-8">
-                        <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">Marketplace</Link>
-                        <Link href="/industries" className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">Industries</Link>
-                        <Link href="/about" className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">About</Link>
-                        <Link href="/contact" className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">Contact</Link>
+                    <div className="hidden md:flex desktop-auth-menu items-center space-x-10">
+                        <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
+                            Marketplace
+                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                        </Link>
+                        <Link href="/industries" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
+                            Industries
+                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                        </Link>
+                        <Link href="/about" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
+                            About
+                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                        </Link>
+                        <Link href="/contact" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
+                            Contact
+                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                        </Link>
 
                         {isAuthenticated ? (
-                            <div className="flex items-center space-x-4 border-l border-neutral-200 pl-4">
+                            <div className="flex items-center space-x-5 border-l-2 border-slate-200/60 pl-6 ml-2">
                                 {user?.role === 'admin' ? (
                                     <>
-                                        <span className="font-body text-sm font-semibold text-primary-deep mr-2">
+                                        <span className="font-body text-sm font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-full shadow-inner">
                                             {user.name}
                                         </span>
                                         <AdminButton to="/admin/dashboard" />
                                     </>
                                 ) : (
-                                    <Link href={user?.role === 'manufacturer' ? '/manufacturer/dashboard' : '/wholesaler/dashboard'} className="font-body text-sm font-medium text-primary-deep hover:text-primary-navy transition-colors">
+                                    <Link href={user?.role === 'manufacturer' ? '/manufacturer/dashboard' : '/wholesaler/dashboard'} className="font-body text-[15px] font-bold text-primary-deep hover:text-emerald-600 transition-colors flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                                            {user?.name?.charAt(0) || 'U'}
+                                        </div>
                                         Dashboard
                                     </Link>
                                 )}
 
                                 <button
                                     onClick={handleLogout}
-                                    className="px-4 py-2 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium"
+                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-[0_4px_14px_0_rgb(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 font-body text-[15px] font-semibold"
                                 >
                                     Logout
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center space-x-4 border-l border-neutral-200 pl-4">
-                                <Link href="/login" className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors">
+                            <div className="flex items-center space-x-4 border-l-2 border-slate-200/60 pl-6 ml-2">
+                                <Link href="/login" className="font-body text-[15px] font-bold text-slate-700 hover:text-emerald-600 transition-colors px-4 py-2.5 rounded-lg hover:bg-emerald-50">
                                     Log In
                                 </Link>
-                                <Link href="/register" className="px-4 py-2 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium">
+                                <Link href="/register" className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-primary-deep text-white rounded-lg transition-all shadow-[0_4px_14px_0_rgb(5,150,105,0.39)] hover:shadow-[0_6px_20px_rgba(5,150,105,0.23)] hover:-translate-y-0.5 font-body text-[15px] font-bold tracking-wide">
                                     Sign Up
                                 </Link>
-
                             </div>
                         )}
                     </div>
 
                     {/* Mobile Navigation */}
                     {isMobileMenuOpen && (
-                        <div className="mobile-auth-menu absolute top-20 left-0 w-full bg-white shadow-lg flex flex-col p-4 border-t border-slate-100">
-                            <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} onClick={() => setIsMobileMenuOpen(false)} className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors py-3 border-b border-slate-50">Marketplace</Link>
-                            <Link href="/industries" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors py-3 border-b border-slate-50">Industries</Link>
-                            <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors py-3 border-b border-slate-50">About</Link>
-                            <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors py-3 border-b border-slate-50">Contact</Link>
+                        <div className="mobile-auth-menu absolute top-24 left-0 w-full bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col p-6 border-t border-slate-100 rounded-b-3xl">
+                            <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} onClick={() => setIsMobileMenuOpen(false)} className="font-body text-base font-semibold text-slate-700 hover:text-emerald-600 transition-colors py-4 border-b border-slate-100">Marketplace</Link>
+                            <Link href="/industries" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-base font-semibold text-slate-700 hover:text-emerald-600 transition-colors py-4 border-b border-slate-100">Industries</Link>
+                            <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-base font-semibold text-slate-700 hover:text-emerald-600 transition-colors py-4 border-b border-slate-100">About</Link>
+                            <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-base font-semibold text-slate-700 hover:text-emerald-600 transition-colors py-4 border-b border-slate-100">Contact</Link>
 
                             {isAuthenticated ? (
-                                <div className="flex flex-col space-y-3 mt-4">
+                                <div className="flex flex-col space-y-4 mt-6">
                                     {user?.role === 'admin' ? (
-                                        <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-sm font-medium text-primary-deep hover:text-primary-navy transition-colors py-2">
+                                        <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="font-body text-base font-bold text-primary-deep hover:text-emerald-600 transition-colors py-2 text-center bg-emerald-50 rounded-xl">
                                             Dashboard
                                         </Link>
                                     ) : (
-                                        <Link href={user?.role === 'manufacturer' ? '/manufacturer/dashboard' : '/wholesaler/dashboard'} onClick={() => setIsMobileMenuOpen(false)} className="font-body text-sm font-medium text-primary-deep hover:text-primary-navy transition-colors py-2">
+                                        <Link href={user?.role === 'manufacturer' ? '/manufacturer/dashboard' : '/wholesaler/dashboard'} onClick={() => setIsMobileMenuOpen(false)} className="font-body text-base font-bold text-primary-deep hover:text-emerald-600 transition-colors py-2 text-center bg-emerald-50 rounded-xl">
                                             Dashboard
                                         </Link>
                                     )}
 
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full text-center px-4 py-3 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium"
+                                        className="w-full text-center px-4 py-3.5 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-all shadow-md font-body text-base font-bold"
                                     >
                                         Logout
                                     </button>
                                 </div>
                             ) : (
-                                <div className="flex flex-col space-y-3 mt-4">
-                                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="text-center font-body text-sm font-medium text-neutral-800 hover:text-primary-navy transition-colors py-2 border border-slate-200 rounded">
+                                <div className="flex flex-col space-y-4 mt-6">
+                                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="text-center font-body text-base font-bold text-slate-700 hover:text-emerald-600 transition-colors py-3.5 bg-slate-50 border border-slate-200 rounded-xl">
                                         Log In
                                     </Link>
-                                    <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="text-center px-4 py-3 bg-primary-deep text-white rounded hover:bg-primary-navy transition-colors font-body text-sm font-medium">
+                                    <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="text-center px-4 py-3.5 bg-gradient-to-r from-emerald-600 to-primary-deep text-white rounded-xl shadow-lg font-body text-base font-bold">
                                         Sign Up
                                     </Link>
-
                                 </div>
                             )}
                         </div>
