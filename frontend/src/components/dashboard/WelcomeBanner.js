@@ -11,8 +11,7 @@ const optionsMap = {
   '30days': 'Last 30 Days',
   '3months': 'Last 3 Months',
   '6months': 'Last 6 Months',
-  '12months': 'Last 12 Months',
-  custom: 'Custom Range'
+  '12months': 'Last 12 Months'
 };
 
 const MENU_MIN_WIDTH = 220;
@@ -32,37 +31,12 @@ const WelcomeBanner = ({
   const { user } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [menuStyle, setMenuStyle] = useState({ top: 0, left: 0, width: MENU_MIN_WIDTH });
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const updateMenuPosition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setMenuStyle({
-      top: rect.bottom + 8,
-      left: rect.left,
-      width: Math.max(rect.width, MENU_MIN_WIDTH)
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!dropdownOpen) return;
-
-    updateMenuPosition();
-
-    window.addEventListener('scroll', updateMenuPosition, true);
-    window.addEventListener('resize', updateMenuPosition);
-
-    return () => {
-      window.removeEventListener('scroll', updateMenuPosition, true);
-      window.removeEventListener('resize', updateMenuPosition);
-    };
-  }, [dropdownOpen, updateMenuPosition]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -99,20 +73,13 @@ const WelcomeBanner = ({
       : 'Verified Business';
 
   const menu = dropdownOpen && mounted
-    ? createPortal(
+    ? (
         <div
           ref={menuRef}
           id="reporting-period-menu"
           role="listbox"
           aria-label="Reporting period options"
-          style={{
-            position: 'fixed',
-            top: menuStyle.top,
-            left: menuStyle.left,
-            width: menuStyle.width,
-            zIndex: 9999
-          }}
-          className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-[14px] shadow-[0_20px_40px_rgba(15,23,42,0.15)] p-2 transform origin-top animate-in fade-in zoom-in-95 duration-200"
+          className="absolute left-0 top-[100%] mt-2 min-w-[220px] bg-[#FFFFFF] border border-[#E5E7EB] rounded-[14px] shadow-[0_20px_40px_rgba(15,23,42,0.15)] p-2 z-[9999] transform origin-top animate-in fade-in zoom-in-95 duration-200"
         >
           {Object.entries(optionsMap).map(([key, label]) => {
             const isActive = timeRange === key;
@@ -137,8 +104,7 @@ const WelcomeBanner = ({
               </button>
             );
           })}
-        </div>,
-        document.body
+        </div>
       )
     : null;
 

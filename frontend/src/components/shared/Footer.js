@@ -24,8 +24,8 @@ export default function Footer() {
                              {/* Ambient white spotlight to make the dark logo readable */}
                              <div className="absolute left-[40px] top-1/2 -translate-y-1/2 -translate-x-1/2 w-[100px] h-[60px] bg-white/40 blur-[20px] rounded-full pointer-events-none transition-all duration-300 group-hover:bg-white/60"></div>
                              
-                             <img src="/assets/images/gearup-logo-cropped.png" alt="GearUp Logo" className="relative z-10 h-[75px] md:h-[85px] -mt-1 md:-mt-1.5 w-auto object-contain opacity-100 transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
-                             <div className="relative z-10 flex flex-col justify-center border-l-2 border-emerald-700/50 pl-5 h-16">
+                             <img src="/assets/images/gearup-logo-cropped.png" alt="GearUp Logo" className="relative z-10 h-[40px] md:h-[48px] w-auto object-contain opacity-100 transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
+                             <div className="relative z-10 flex flex-col justify-center border-l-2 border-emerald-700/50 pl-5 h-10">
                                 <span className="text-[13px] md:text-[15px] font-black tracking-[0.3em] uppercase bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent drop-shadow-sm">
                                     Empowering the Future
                                 </span>
@@ -128,18 +128,10 @@ export default function Footer() {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="pt-6 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-[11px] font-medium text-emerald-100/40 tracking-[0.1em] uppercase">
+                <div className="pt-6 border-t border-white/5 flex justify-center items-center">
+                    <p className="text-[11px] font-medium text-emerald-100/40 tracking-[0.1em] uppercase text-center">
                         &copy; {new Date().getFullYear()} GEARUP B2B MARKETPLACE. ALL RIGHTS RESERVED.
                     </p>
-                    
-                    <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-black/40 border border-white/5 shadow-inner backdrop-blur-md">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span>
-                        </span>
-                        <span className="text-[11px] font-bold text-emerald-100/70 tracking-widest uppercase">Systems Operational</span>
-                    </div>
                 </div>
             </div>
         </footer>

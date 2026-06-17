@@ -233,11 +233,11 @@ exports.createOrder = async (req, res, next) => {
             try {
                 const adminUsers = await User.find({ role: 'admin' });
                 for (const admin of adminUsers) {
-                    await sendEmail(
+                    sendEmail(
                         admin.email,
                         `New Payment Proof Uploaded - Order #${order._id.toString().slice(-6)}`,
                         getPaymentProofTemplate(order._id.toString().slice(-6), req.user.name || 'Buyer', totalAmount)
-                    );
+                    ).catch(err => console.error('[EMAIL] Failed to send admin notification:', err));
                 }
             } catch (emailErr) {
                 console.error('[EMAIL] Failed to send admin notification:', emailErr);
@@ -561,20 +561,20 @@ exports.updateOrderStatus = async (req, res, next) => {
             const populatedOrder = await Order.findById(order._id).populate('buyer', 'email name');
             if (populatedOrder && populatedOrder.buyer && populatedOrder.buyer.email) {
                 if (normalizedStatus === 'shipped') {
-                    await sendEmail(
+                    sendEmail(
                         populatedOrder.buyer.email,
                         `Order Shipped`,
                         getShipmentTemplate(order._id.toString().slice(-6))
-                    );
+                    ).catch(err => console.error('[EMAIL]', err));
                 } else if (normalizedStatus === 'delivered' || normalizedStatus === 'completed') {
-                    await sendEmail(
+                    sendEmail(
                         populatedOrder.buyer.email,
                         `Your Order #${order._id.toString().slice(-6)} has been Delivered!`,
                         `<h3>Delivery Completed</h3>
                                <p>Hi ${populatedOrder.buyer.name},</p>
                                <p>Your order <b>#${order._id.toString().slice(-6)}</b> has been marked as delivered.</p>
                                <p>Thank you for using our platform.</p>`
-                    );
+                    ).catch(err => console.error('[EMAIL]', err));
                 }
             }
             
@@ -582,14 +582,14 @@ exports.updateOrderStatus = async (req, res, next) => {
             if (order.buyer?.toString() === req.user.id && (normalizedStatus === 'delivered' || normalizedStatus === 'completed')) {
                 const adminUsers = await User.find({ role: 'admin' });
                 for (const admin of adminUsers) {
-                    await sendEmail(
+                    sendEmail(
                         admin.email,
                         `Delivery Confirmed - Order #${order._id.toString().slice(-6)}`,
                         `<h3>Settlement Ready for Release</h3>
                                <p>The buyer has confirmed delivery for order <b>#${order._id.toString().slice(-6)}</b>.</p>
                                <p>The settlement is now ready to be released to the manufacturers.</p>
                                <p>Please log in to the Admin Dashboard > Settlements Tab to release the funds.</p>`
-                    );
+                    ).catch(err => console.error('[EMAIL]', err));
                 }
             }
         } catch (emailErr) {
@@ -692,11 +692,11 @@ exports.updatePaymentStatus = async (req, res, next) => {
                 const populatedOrder = await Order.findById(order._id).populate('buyer', 'email name').populate('items.seller', 'email name');
                 
                 if (populatedOrder && populatedOrder.buyer && populatedOrder.buyer.email) {
-                    await sendEmail(
+                    sendEmail(
                         populatedOrder.buyer.email,
                         `Order Approved Successfully`,
                         getBuyerOrderApprovedTemplate(order._id.toString().slice(-6))
-                    );
+                    ).catch(err => console.error('[EMAIL]', err));
                 }
 
                 // Notify all manufacturers
@@ -706,11 +706,11 @@ exports.updatePaymentStatus = async (req, res, next) => {
                         const sellerEmail = item.seller?.email;
                         if (sellerEmail && !notifiedSellers.has(sellerEmail)) {
                             notifiedSellers.add(sellerEmail);
-                            await sendEmail(
+                            sendEmail(
                                 sellerEmail,
                                 `New Approved Order`,
                                 getManufacturerOrderApprovedTemplate(order._id.toString().slice(-6), populatedOrder.buyer.name || 'Buyer')
-                            );
+                            ).catch(err => console.error('[EMAIL]', err));
                         }
                     }
                 }
@@ -722,14 +722,14 @@ exports.updatePaymentStatus = async (req, res, next) => {
                 const populatedOrder = await Order.findById(order._id).populate('buyer', 'email name');
                 if (populatedOrder && populatedOrder.buyer && populatedOrder.buyer.email) {
                     if (normalizedPaymentStatus === 'rejected') {
-                        await sendEmail({
+                        sendEmail({
                             email: populatedOrder.buyer.email,
                             subject: `Payment Rejected - Order #${order._id.toString().slice(-6)}`,
                             html: `<h3>Payment Proof Rejected</h3>
                                    <p>Hi ${populatedOrder.buyer.name},</p>
                                    <p>Unfortunately, your payment proof for order <b>#${order._id.toString().slice(-6)}</b> has been rejected by our verification team.</p>
                                    <p>Please contact support or re-upload a valid proof to proceed with your order.</p>`
-                        });
+                        }).catch(err => console.error('[EMAIL]', err));
                     } else if (normalizedPaymentStatus === 'pending') {
                         await sendEmail({
                             email: populatedOrder.buyer.email,

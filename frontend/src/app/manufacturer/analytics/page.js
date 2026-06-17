@@ -13,7 +13,8 @@ import {
     AreaChart, Area, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, 
     CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
-import { formatPKR, formatPKRShort } from '@/lib/financeUtils';
+import { formatPKR, formatPKRShort, sumSellerRefundDeductions, sumBuyerRefundDeductions } from '@/lib/financeUtils';
+import { useRefundRecords } from '@/hooks/useRefundRecords';
 import { isChartEligibleSellerOrder, isChartEligiblePurchaseOrder, getSellerSubtotal } from '@/lib/dashboardAnalytics';
 
 function AnalyticsContent() {
@@ -26,6 +27,7 @@ function AnalyticsContent() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [timeRange, setTimeRange] = useState('6months');
+    const { refundRecords } = useRefundRecords();
 
     const setActiveTab = (tab) => {
         router.push(`/manufacturer/analytics?tab=${tab}`);
@@ -159,6 +161,20 @@ function AnalyticsContent() {
             const change = ((curr - prev) / prev) * 100;
             return `${change > 0 ? '+' : ''}${change.toFixed(1)}%`;
         };
+
+        const currentUserId = (user?._id || user?.id)?.toString();
+        
+        const salesRefunds = sumSellerRefundDeductions(refundRecords, currentUserId, null, { start: cutoffDate, end: now });
+        const prevSalesRefunds = sumSellerRefundDeductions(refundRecords, currentUserId, null, { start: prevCutoffDate, end: cutoffDate });
+        
+        const purchaseRefunds = sumBuyerRefundDeductions(refundRecords, currentUserId, null, { start: cutoffDate, end: now });
+        const prevPurchaseRefunds = sumBuyerRefundDeductions(refundRecords, currentUserId, null, { start: prevCutoffDate, end: cutoffDate });
+
+        totalSalesVal = Math.max(0, totalSalesVal - salesRefunds);
+        prevSalesVal = Math.max(0, prevSalesVal - prevSalesRefunds);
+        
+        totalPurchasesVal = Math.max(0, totalPurchasesVal - purchaseRefunds);
+        prevPurchasesVal = Math.max(0, prevPurchasesVal - prevPurchaseRefunds);
 
         const grossProfitVal = totalSalesVal - totalPurchasesVal;
         const prevProfitVal = prevSalesVal - prevPurchasesVal;

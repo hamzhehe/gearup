@@ -197,7 +197,7 @@ const Register = () => {
     const router = useRouter();
     const fieldRefs = useRef({});
 
-    const provinces = REGISTRATION_PROVINCES;
+    const provinces = ['Punjab'];
     const provinceCities = getCitiesForProvince(formData.province);
     const locationVerified = isLocationVerified(formData);
     const cityDisabled = !formData.province;
@@ -481,7 +481,7 @@ const Register = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         className={inputClass('name')}
-                                        placeholder="John Doe"
+                                        placeholder="Your Full Name"
                                     />
                                     <FieldMessage
                                         error={fieldTouched.name ? fieldErrors.name : ''}
@@ -498,7 +498,7 @@ const Register = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         className={inputClass('email')}
-                                        placeholder="john@example.com"
+                                        placeholder="Your Email Address"
                                     />
                                     <FieldMessage
                                         error={fieldTouched.email ? fieldErrors.email : ''}
@@ -531,25 +531,23 @@ const Register = () => {
                                         <div className="mt-2">
                                             <div className="flex items-center justify-between text-xs mb-1">
                                                 <span className="text-slate-500">Password strength</span>
-                                                <span className={`font-semibold ${
-                                                    passwordStrength === 'Strong'
-                                                        ? 'text-emerald-600'
-                                                        : passwordStrength === 'Medium'
-                                                            ? 'text-amber-600'
-                                                            : 'text-red-600'
-                                                }`}>
+                                                <span className={`font-semibold ${passwordStrength === 'Strong'
+                                                    ? 'text-emerald-600'
+                                                    : passwordStrength === 'Medium'
+                                                        ? 'text-amber-600'
+                                                        : 'text-red-600'
+                                                    }`}>
                                                     {passwordStrength}
                                                 </span>
                                             </div>
                                             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                 <div
-                                                    className={`h-full transition-all duration-300 ${
-                                                        passwordStrength === 'Strong'
-                                                            ? 'w-full bg-emerald-500'
-                                                            : passwordStrength === 'Medium'
-                                                                ? 'w-2/3 bg-amber-500'
-                                                                : 'w-1/3 bg-red-500'
-                                                    }`}
+                                                    className={`h-full transition-all duration-300 ${passwordStrength === 'Strong'
+                                                        ? 'w-full bg-emerald-500'
+                                                        : passwordStrength === 'Medium'
+                                                            ? 'w-2/3 bg-amber-500'
+                                                            : 'w-1/3 bg-red-500'
+                                                        }`}
                                                 />
                                             </div>
                                         </div>
@@ -586,7 +584,7 @@ const Register = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         className={inputClass('businessName')}
-                                        placeholder="GearUp Sports Ltd."
+                                        placeholder="Your Business Name"
                                     />
                                     <FieldMessage
                                         error={fieldTouched.businessName ? fieldErrors.businessName : ''}
@@ -603,7 +601,7 @@ const Register = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         className={inputClass('phone')}
-                                        placeholder="03001234567"
+                                        placeholder="Your Phone Number"
                                     />
                                     <FieldMessage
                                         error={fieldTouched.phone ? fieldErrors.phone : ''}
@@ -621,7 +619,7 @@ const Register = () => {
                                             onChange={handleChange}
                                             onBlur={handleBlur}
                                             className={inputClass('shopNumber')}
-                                            placeholder="123"
+                                            placeholder="Your Shop #"
                                         />
                                         <FieldMessage
                                             error={fieldTouched.shopNumber ? fieldErrors.shopNumber : ''}
@@ -638,7 +636,7 @@ const Register = () => {
                                             onChange={handleChange}
                                             onBlur={handleBlur}
                                             className={inputClass('street')}
-                                            placeholder="Main St"
+                                            placeholder="Your Street"
                                         />
                                         <FieldMessage
                                             error={fieldTouched.street ? fieldErrors.street : ''}
@@ -656,7 +654,7 @@ const Register = () => {
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         className={inputClass('area')}
-                                        placeholder="DHA Phase 5"
+                                        placeholder="Your Area/Sector"
                                     />
                                     <FieldMessage
                                         error={fieldTouched.area ? fieldErrors.area : ''}

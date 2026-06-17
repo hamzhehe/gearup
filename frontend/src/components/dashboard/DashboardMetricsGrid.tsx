@@ -50,24 +50,7 @@ export default function DashboardMetricsGrid({
         : "Live purchasing metrics and supplier activity";
 
     const cards = [
-        {
-            label: 'Total Revenue',
-            value: formatPKR(data.totalRevenue ?? 0),
-            change: `${growthRates.revenue || '+0%'} ${timeLabel}`,
-            trend: 'up',
-            icon: Banknote,
-            color: 'text-emerald-600 bg-emerald-50 border-emerald-100/60',
-            href: isManufacturer ? '/manufacturer/analytics?tab=sales' : '/wholesaler/orders'
-        },
-        {
-            label: 'Total Spend',
-            value: formatPKR(data.totalSpend ?? 0),
-            change: `${growthRates.spend || '+0%'} ${timeLabel}`,
-            trend: 'up',
-            icon: Banknote,
-            color: 'text-[#00A878] bg-[#E8FFF5] border-emerald-100/60',
-            href: isManufacturer ? '/manufacturer/purchases' : '/wholesaler/orders'
-        },
+
         // Card 1: PURCHASE ORDERS (Primary for Wholesaler) / SALES ORDERS (Primary for Mfg)
         {
             label: isManufacturer ? "Sales Orders" : "Purchase Orders",

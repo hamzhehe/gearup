@@ -29,7 +29,7 @@ import PageShell from '@/components/dashboard/PageShell';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import InvoiceModal from '@/components/shared/InvoiceModal';
-import { formatPKR, sumBuyerRefundDeductions } from '@/lib/financeUtils';
+import { formatPKR, sumBuyerRefundDeductions, countBuyerRefunds, getUserFinancialMetrics } from '@/lib/financeUtils';
 import { isBuyerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
 import { useRefundRecords } from '@/hooks/useRefundRecords';
 import { subscribeFinancialSync } from '@/lib/financialSync';
@@ -120,17 +120,44 @@ const WholesalerOrdersPage = () => {
     }, [orders, userId]);
 
     const purchaseStats = useMemo(() => {
-        const grossSpend = purchaseOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-        const buyerRefundDeductions = sumBuyerRefundDeductions(refundRecords, userId, null);
-        const totalSpent = Math.max(0, grossSpend - buyerRefundDeductions);
-        return { totalSpent, grossSpend, buyerRefundDeductions };
+        const buyerRefundsCount = countBuyerRefunds(refundRecords, userId, null);
+        
+        const spent = purchaseOrders.reduce((sum, order) => {
+            const status = (order.status || '').toLowerCase();
+            
+            const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+            const isRefundRecord = refundRecords?.some(r => {
+                const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                const oId = (order?._id || order?.id)?.toString();
+                return rId && oId && rId === oId;
+            });
+            const isRefunded = isPayRefunded || isRefundRecord;
+
+            if (!isRefunded && (status === 'delivered' || status === 'completed')) {
+                return sum + (order.totalAmount || 0);
+            }
+            return sum;
+        }, 0);
+
+        return { totalSpent: spent, buyerRefundsCount };
     }, [purchaseOrders, refundRecords, userId]);
 
     const filteredOrders = useMemo(() => {
         let result = purchaseOrders;
 
         if (filter !== 'all') {
-            result = result.filter(order => order.status?.toLowerCase() === filter.toLowerCase());
+            if (filter === 'refunded') {
+                result = result.filter(order => {
+                    const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+                    return isPayRefunded || refundRecords?.some(r => {
+                        const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                        const oId = (order?._id || order?.id)?.toString();
+                        return rId && oId && rId === oId;
+                    });
+                });
+            } else {
+                result = result.filter(order => order.status?.toLowerCase() === filter.toLowerCase());
+            }
         }
 
         if (searchQuery.trim()) {
@@ -261,11 +288,12 @@ const WholesalerOrdersPage = () => {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-2">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 mb-2">
                 {[
                     { label: 'Total Spent', value: formatPKR(purchaseStats.totalSpent), icon: Banknote, color: 'text-blue-700', bg: 'bg-blue-100' },
                     { label: 'Total Purchases', value: purchaseOrders.length, icon: Package, color: 'text-indigo-700', bg: 'bg-indigo-100' },
                     { label: 'Pending Orders', value: purchaseOrders.filter(o => o.status === 'pending' || o.status === 'processing').length, icon: Clock, color: 'text-amber-700', bg: 'bg-amber-100' },
+                    { label: 'Refund Orders', value: purchaseStats.buyerRefundsCount, icon: AlertCircle, color: 'text-red-700', bg: 'bg-red-100' },
                     { label: 'Active Suppliers', value: new Set(purchaseOrders.map(o => o.seller?._id || o.manufacturer?._id || o.sellerStats?.[0]?.seller?._id).filter(Boolean)).size || purchaseOrders.length > 0 ? new Set(purchaseOrders.map(o => o.seller?._id || o.manufacturer?._id || o.sellerStats?.[0]?.seller?._id).filter(Boolean)).size : 0, icon: ShieldCheck, color: 'text-emerald-700', bg: 'bg-emerald-100' }
                 ].map((stat, idx) => (
                     <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:shadow-md transition-all duration-300 group hover:-translate-y-1">
@@ -314,8 +342,12 @@ const WholesalerOrdersPage = () => {
 
                         {/* Professional Tabs Row */}
                         <div className="flex items-center gap-2 overflow-x-auto border-t border-[#F1F5F9] pt-5 scrollbar-none pb-1">
-                            {['all', 'pending', 'paid', 'shipped', 'delivered'].map((f) => {
+                            {['all', 'pending', 'shipped', 'delivered', 'refunded'].map((f) => {
                                 const isActive = filter === f;
+                                let count = 0;
+                                if (f === 'all') count = purchaseOrders.length;
+                                else if (f === 'refunded') count = purchaseStats.buyerRefundsCount;
+                                else count = purchaseOrders.filter(o => o.status?.toLowerCase() === f.toLowerCase()).length;
                                 return (
                                     <button
                                         key={f}
@@ -323,6 +355,11 @@ const WholesalerOrdersPage = () => {
                                         className={`status-tab ${isActive ? 'active' : ''}`}
                                     >
                                         <span className="capitalize">{f === 'delivered' ? 'Received' : f}</span>
+                                        <span className={`px-2 py-0.5 ml-2 rounded-[8px] text-[11px] font-[700] leading-none ${
+                                            isActive ? 'bg-white/20 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
+                                        }`}>
+                                            {count}
+                                        </span>
                                     </button>
                                 );
                             })}
@@ -350,8 +387,20 @@ const WholesalerOrdersPage = () => {
                                             <tbody className="divide-y divide-[#F1F5F9]">
                                                 {filteredOrders.map((order) => {
                                                     const formattedDate = new Date(order.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-                                                    const statusStyle = getStatusStyle(order.status);
                                                     const supplierName = order.manufacturer?.name || order.sellerStats?.[0]?.seller?.name || 'Verified Supplier';
+
+                                                    const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+                                                    const isRefunded = isPayRefunded || refundRecords?.some(r => {
+                                                        const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                                                        const oId = (order?._id || order?.id)?.toString();
+                                                        return rId && oId && rId === oId;
+                                                    });
+                                                    let displayStatus = order.status;
+                                                    if (isRefunded && (displayStatus.toLowerCase() === 'delivered' || displayStatus.toLowerCase() === 'completed')) {
+                                                        displayStatus = 'Returned';
+                                                    }
+                                                    
+                                                    const statusStyle = getStatusStyle(displayStatus);
 
                                                     return (
                                                         <tr key={order._id} className="h-[72px] hover:bg-[#F8FFFB] transition-all duration-200 group">
@@ -409,8 +458,8 @@ const WholesalerOrdersPage = () => {
 
                                                             {/* Status Badge */}
                                                             <td>
-                                                                <div className={`badge-enterprise inline-flex ${order.status.toLowerCase() === 'delivered' || order.status.toLowerCase() === 'paid' ? 'success' : order.status.toLowerCase() === 'shipped' ? 'info' : order.status.toLowerCase() === 'cancelled' ? 'danger' : 'warning'}`}>
-                                                                    {order.status.toLowerCase() === 'delivered' ? 'Received' : order.status}
+                                                                <div className={`badge-enterprise inline-flex ${displayStatus.toLowerCase() === 'delivered' || displayStatus.toLowerCase() === 'paid' ? 'success' : displayStatus.toLowerCase() === 'shipped' ? 'info' : displayStatus.toLowerCase() === 'cancelled' || displayStatus.toLowerCase() === 'returned' ? 'danger' : 'warning'}`}>
+                                                                    {displayStatus.toLowerCase() === 'delivered' ? 'Received' : displayStatus}
                                                                 </div>
                                                             </td>
 
@@ -453,9 +502,21 @@ const WholesalerOrdersPage = () => {
                                 {/* Mobile Cards (Visible only on < 768px) */}
                                 <div className="mobile-only grid grid-cols-1 gap-4">
                                     {filteredOrders.map((order) => {
-                                        const statusStyle = getStatusStyle(order.status);
                                         const formattedDate = new Date(order.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'});
                                         const supplierName = order.manufacturer?.name || order.sellerStats?.[0]?.seller?.name || 'Verified Supplier';
+                                        
+                                        const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+                                        const isRefunded = isPayRefunded || refundRecords?.some(r => {
+                                            const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                                            const oId = (order?._id || order?.id)?.toString();
+                                            return rId && oId && rId === oId;
+                                        });
+                                        let displayStatus = order.status;
+                                        if (isRefunded && (displayStatus.toLowerCase() === 'delivered' || displayStatus.toLowerCase() === 'completed')) {
+                                            displayStatus = 'Returned';
+                                        }
+
+                                        const statusStyle = getStatusStyle(displayStatus);
 
                                         return (
                                             <div key={order._id} className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm hover:shadow transition-all space-y-4">
@@ -469,7 +530,7 @@ const WholesalerOrdersPage = () => {
                                                         </div>
                                                     </div>
                                                     <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${statusStyle}`}>
-                                                        {order.status.toLowerCase() === 'delivered' ? 'Received' : order.status}
+                                                        {displayStatus.toLowerCase() === 'delivered' ? 'Received' : displayStatus}
                                                     </div>
                                                 </div>
 

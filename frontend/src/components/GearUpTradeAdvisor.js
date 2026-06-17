@@ -45,7 +45,13 @@ export default function GearUpTradeAdvisor() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     scrollToBottom();
   }, [messages]);
 

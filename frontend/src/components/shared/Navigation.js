@@ -31,20 +31,20 @@ const Navigation = () => {
             }`}>
             <div className="w-full mx-auto px-4 sm:px-6 lg:px-10 2xl:px-12">
                 <div className="flex justify-between items-center h-20 md:h-[90px]">
-                    <div className="flex items-center">
-                        <Link href="/" className="flex items-center transition-transform duration-300 hover:scale-[1.03] active:scale-95 group">
+                    <div className="flex items-center h-full">
+                        <Link href="/" className="flex items-center h-full transition-transform duration-300 hover:scale-[1.03] active:scale-95 group">
                             <img 
                                 src="/assets/images/gearup-logo-cropped.png" 
                                 alt="GearUp Logo" 
-                                className="h-[60px] md:h-[76px] -mt-1 md:-mt-2 w-auto object-contain transition-all duration-300 drop-shadow-sm group-hover:drop-shadow-md"
+                                className="h-[40px] md:h-[48px] w-auto object-contain transition-all duration-300 drop-shadow-sm group-hover:drop-shadow-md"
                             />
                         </Link>
-                        <div className="hidden md:flex items-center ml-4 md:ml-6 pl-4 md:pl-6 border-l-2 border-slate-300/70 h-14 md:h-16">
-                            <div className="flex flex-col justify-center gap-[3px]">
-                                <span className="text-[12px] md:text-[14px] font-extrabold tracking-[0.2em] uppercase bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent drop-shadow-sm">
+                        <div className="hidden md:flex items-center ml-4 md:ml-6 pl-4 md:pl-6 border-l-2 border-slate-300/70 h-10">
+                            <div className="flex flex-col justify-center gap-1">
+                                <span className="text-[12px] md:text-[14px] font-extrabold tracking-[0.2em] uppercase bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent drop-shadow-sm leading-none">
                                     Empowering the Future
                                 </span>
-                                <span className="text-[10px] md:text-[12px] font-semibold tracking-[0.25em] text-slate-500/90 uppercase">
+                                <span className="text-[10px] md:text-[12px] font-semibold tracking-[0.25em] text-slate-500/90 uppercase leading-none mt-1">
                                     Of E-Commerce
                                 </span>
                             </div>
@@ -60,29 +60,34 @@ const Navigation = () => {
                     </button>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex desktop-auth-menu items-center space-x-10">
-                        <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
-                            Marketplace
-                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
-                        </Link>
-                        <Link href="/industries" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
-                            Industries
-                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
-                        </Link>
-                        <Link href="/about" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
-                            About
-                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
-                        </Link>
-                        <Link href="/contact" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group px-1 py-2">
-                            Contact
-                            <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
-                        </Link>
+                    <div className="hidden md:flex desktop-auth-menu items-center h-full">
+                        <div className="flex items-center space-x-8 mr-8">
+                            <Link href={isAuthenticated ? (user?.role === 'wholesaler' || user?.role === 'manufacturer' ? '/wholesaler/marketplace' : `/${user?.role}/dashboard`) : '/login'} className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group py-2 flex items-center">
+                                Marketplace
+                                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                            </Link>
+                            <Link href="/industries" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group py-2 flex items-center">
+                                Industries
+                                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                            </Link>
+                            <Link href="/about" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group py-2 flex items-center">
+                                About
+                                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                            </Link>
+                            <Link href="/contact" className="relative font-body text-[15px] font-semibold text-slate-700 hover:text-emerald-700 transition-colors duration-300 group py-2 flex items-center">
+                                Contact
+                                <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-emerald-500 transition-all duration-300 group-hover:w-full rounded-full"></span>
+                            </Link>
+                        </div>
+
+                        {/* Divider Line */}
+                        <div className="h-10 w-[2px] bg-slate-200/60 mx-2"></div>
 
                         {isAuthenticated ? (
-                            <div className="flex items-center space-x-5 border-l-2 border-slate-200/60 pl-6 ml-2">
+                            <div className="flex items-center space-x-5 ml-6">
                                 {user?.role === 'admin' ? (
                                     <>
-                                        <span className="font-body text-sm font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-full shadow-inner">
+                                        <span className="font-body text-sm font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-full shadow-inner flex items-center">
                                             {user.name}
                                         </span>
                                         <AdminButton to="/admin/dashboard" />
@@ -98,17 +103,17 @@ const Navigation = () => {
 
                                 <button
                                     onClick={handleLogout}
-                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-[0_4px_14px_0_rgb(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 font-body text-[15px] font-semibold"
+                                    className="px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-[0_4px_14px_0_rgb(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 font-body text-[15px] font-semibold flex items-center justify-center"
                                 >
                                     Logout
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center space-x-4 border-l-2 border-slate-200/60 pl-6 ml-2">
-                                <Link href="/login" className="font-body text-[15px] font-bold text-slate-700 hover:text-emerald-600 transition-colors px-4 py-2.5 rounded-lg hover:bg-emerald-50">
+                            <div className="flex items-center space-x-4 ml-6">
+                                <Link href="/login" className="font-body text-[15px] font-bold text-slate-700 hover:text-emerald-600 transition-colors px-4 py-2.5 rounded-lg hover:bg-emerald-50 flex items-center justify-center">
                                     Log In
                                 </Link>
-                                <Link href="/register" className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-primary-deep text-white rounded-lg transition-all shadow-[0_4px_14px_0_rgb(5,150,105,0.39)] hover:shadow-[0_6px_20px_rgba(5,150,105,0.23)] hover:-translate-y-0.5 font-body text-[15px] font-bold tracking-wide">
+                                <Link href="/register" className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-primary-deep text-white rounded-lg transition-all shadow-[0_4px_14px_0_rgb(5,150,105,0.39)] hover:shadow-[0_6px_20px_rgba(5,150,105,0.23)] hover:-translate-y-0.5 font-body text-[15px] font-bold tracking-wide flex items-center justify-center">
                                     Sign Up
                                 </Link>
                             </div>

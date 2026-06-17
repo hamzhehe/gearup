@@ -1,7 +1,7 @@
 "use client";
 
 import { getApiBaseUrl } from '@/lib/api';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import InvoiceModal from '@/components/shared/InvoiceModal';
@@ -11,7 +11,7 @@ import Badge from '@/components/common/Badge';
 import PageShell from '@/components/dashboard/PageShell';
 import PageHeader from '@/components/dashboard/PageHeader';
 import StatCard from '@/components/dashboard/StatCard';
-import { formatPKR, sumSellerRefundDeductions } from '@/lib/financeUtils';
+import { formatPKR, countSellerRefunds, getUserFinancialMetrics } from '@/lib/financeUtils';
 import { isSellerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
 import { useRefundRecords } from '@/hooks/useRefundRecords';
 import { subscribeFinancialSync } from '@/lib/financialSync';
@@ -136,18 +136,36 @@ const ManufacturerOrdersPage = () => {
         const status = (s?.status || o.status).toLowerCase();
         return status === 'delivered' || status === 'completed';
     }).length;
-    const grossRevenue = salesOrders.reduce((acc, o) => {
-        const s = o.sellerStats?.find(stat => (stat.seller?._id || stat.seller)?.toString() === userId);
-        const myItems = o.items?.filter(i => (i.seller?._id || i.seller)?.toString() === userId) || [];
-        const amt = s?.subtotal || myItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        return acc + amt;
-    }, 0);
-    const sellerRefundDeductions = sumSellerRefundDeductions(refundRecords, userId, null);
-    const totalRevenue = Math.max(0, grossRevenue - sellerRefundDeductions);
+    const { totalRevenue, sellerRefundsCount } = useMemo(() => {
+        const refundsCount = countSellerRefunds(refundRecords, userId, null);
+        
+        const revenue = salesOrders.reduce((sum, order) => {
+            const myStats = order.sellerStats?.find(s => (s.seller?._id || s.seller) === (user?.id || user?._id));
+            const myItems = order.items?.filter(i => (i.seller?._id || i.seller) === (user?.id || user?._id)) || [];
+            const myStatus = (myStats?.status || order.status || '').toLowerCase();
+            
+            const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+            const isRefundRecord = refundRecords?.some(r => {
+                const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                const oId = (order?._id || order?.id)?.toString();
+                return rId && oId && rId === oId;
+            });
+            const isRefunded = isPayRefunded || isRefundRecord;
+
+            if (!isRefunded && (myStatus === 'delivered' || myStatus === 'completed')) {
+                const amount = myStats?.subtotal || myItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                return sum + amount;
+            }
+            return sum;
+        }, 0);
+
+        return { totalRevenue: revenue, sellerRefundsCount: refundsCount };
+    }, [salesOrders, refundRecords, user]);
 
     // Dynamic count per status tab
     const getCountForStatus = (status) => {
         if (status === 'all') return salesOrders.length;
+        if (status === 'refunded') return sellerRefundsCount;
         return salesOrders.filter(o => {
             const s = o.sellerStats?.find(stat => (stat.seller?._id || stat.seller) === (user?.id || user?._id));
             const currentStatus = (s?.status || o.status).toLowerCase();
@@ -173,6 +191,14 @@ const ManufacturerOrdersPage = () => {
                 if (myStatus !== 'delivered' && myStatus !== 'completed') return false;
             } else if (filter === 'pending') {
                 if (!myStatus.startsWith('pending')) return false;
+            } else if (filter === 'refunded') {
+                const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+                const hasRefund = isPayRefunded || refundRecords?.some(r => {
+                    const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                    const oId = (order?._id || order?.id)?.toString();
+                    return rId && oId && rId === oId;
+                });
+                if (!hasRefund) return false;
             } else if (myStatus !== filter) {
                 return false;
             }
@@ -222,7 +248,8 @@ const ManufacturerOrdersPage = () => {
             shipped: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Truck },
             delivered: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle },
             completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
-            cancelled: { color: 'text-red-600 bg-red-50 border-red-100', icon: AlertCircle }
+            cancelled: { color: 'text-red-600 bg-red-50 border-red-100', icon: AlertCircle },
+            returned: { color: 'text-red-600 bg-red-50 border-red-100', icon: AlertCircle }
         };
         const s = (status || '').toLowerCase();
         return configs[s] || { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock };
@@ -337,12 +364,13 @@ const ManufacturerOrdersPage = () => {
             )}
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-5">
                 {[
                     { label: "Total Orders", value: totalOrders, icon: Package, color: "text-[#0F172A]", bg: "bg-[#F8FAFC]", topColor: "accent-slate" },
                     { label: "Pending", value: pendingOrders, icon: Clock, color: "text-amber-600", bg: "bg-amber-50", topColor: "accent-amber" },
                     { label: "Processing", value: processingOrders, icon: RefreshCw, color: "text-blue-600", bg: "bg-blue-50", topColor: "accent-blue" },
                     { label: "Delivered", value: deliveredOrders, icon: CheckCircle, color: "text-[#00A878]", bg: "bg-[#E8FFF5]", topColor: "accent-green" },
+                    { label: "Refund Orders", value: sellerRefundsCount, icon: AlertCircle, color: "text-red-600", bg: "bg-red-50", topColor: "accent-red" },
                     { label: "Revenue", value: formatPKR(totalRevenue), icon: Banknote, color: "text-[#0F172A]", bg: "bg-[#F8FAFC]", topColor: "accent-slate" },
                 ].map((stat, idx) => (
                     <div key={idx} className={`kpi-card-enterprise ${stat.topColor} flex flex-col`}>
@@ -384,7 +412,7 @@ const ManufacturerOrdersPage = () => {
                             <div className="flex gap-4 w-full md:w-auto">
                                 {/* Payment Status Dropdown */}
                                 <div className="flex items-center bg-[#FFFFFF] border border-[#CBD5E1] rounded-[14px] h-[52px] px-4 flex-1 md:flex-initial hover:border-[#94A3B8] transition-colors focus-within:border-[#00A878] focus-within:ring-[4px] focus-within:ring-[#00A878]/10">
-                                    <span className="text-[11px] font-[700] text-[#64748B] uppercase tracking-widest mr-3">Pay</span>
+                                    <span className="text-[11px] font-[700] text-[#64748B] uppercase tracking-widest mr-3">Payment</span>
                                     <select
                                         value={paymentStatusFilter}
                                         onChange={(e) => setPaymentStatusFilter(e.target.value)}
@@ -405,8 +433,8 @@ const ManufacturerOrdersPage = () => {
                                         onChange={(e) => setSortBy(e.target.value)}
                                         className="bg-transparent text-[#0F172A] font-sans text-[14px] font-[600] outline-none cursor-pointer w-full appearance-none"
                                     >
-                                        <option value="newest">Newest First</option>
-                                        <option value="oldest">Oldest First</option>
+                                        <option value="newest">Latest</option>
+                                        <option value="oldest">Oldest</option>
                                         <option value="amount-high">Amount: High</option>
                                         <option value="amount-low">Amount: Low</option>
                                     </select>
@@ -416,7 +444,7 @@ const ManufacturerOrdersPage = () => {
 
                         {/* Professional Tabs Row */}
                         <div className="flex items-center gap-2 overflow-x-auto border-t border-[#F1F5F9] pt-5 scrollbar-none pb-1">
-                            {['all', 'pending', 'processing', 'shipped', 'delivered'].map((status) => {
+                            {['all', 'pending', 'processing', 'shipped', 'delivered', 'refunded'].map((status) => {
                                 const count = getCountForStatus(status);
                                 const isActive = filter === status;
                                 return (
@@ -461,7 +489,19 @@ const ManufacturerOrdersPage = () => {
                                                 {filteredOrders.map((order) => {
                                                     const myStats = order.sellerStats?.find(s => (s.seller?._id || s.seller) === (user?.id || user?._id));
                                                     const myItems = order.items?.filter(i => (i.seller?._id || i.seller) === (user?.id || user?._id)) || [];
-                                                    const myStatus = myStats?.status || order.status;
+                                                    let myStatus = myStats?.status || order.status;
+                                                    
+                                                    const isPayRefunded = (order.paymentStatus || '').toLowerCase() === 'refunded';
+                                                    const isRefunded = isPayRefunded || refundRecords?.some(r => {
+                                                        const rId = (r.order?._id || r.order?.id || r.order)?.toString();
+                                                        const oId = (order?._id || order?.id)?.toString();
+                                                        return rId && oId && rId === oId;
+                                                    });
+                                                    
+                                                    if (isRefunded && (myStatus.toLowerCase() === 'delivered' || myStatus.toLowerCase() === 'completed')) {
+                                                        myStatus = 'Returned';
+                                                    }
+
                                                     const config = getStatusConfig(myStatus.toLowerCase());
                                                     
                                                     // Payment Badges
@@ -528,7 +568,7 @@ const ManufacturerOrdersPage = () => {
 
                                                             {/* Status Badge */}
                                                             <td>
-                                                                <div className={`badge-enterprise inline-flex items-center gap-1.5 ${myStatus.toLowerCase() === 'delivered' || myStatus.toLowerCase() === 'completed' ? 'success' : myStatus.toLowerCase() === 'cancelled' ? 'danger' : myStatus.toLowerCase() === 'shipped' ? 'info' : 'warning'}`}>
+                                                                <div className={`badge-enterprise inline-flex items-center gap-1.5 ${myStatus.toLowerCase() === 'delivered' || myStatus.toLowerCase() === 'completed' ? 'success' : myStatus.toLowerCase() === 'cancelled' || myStatus.toLowerCase() === 'returned' ? 'danger' : myStatus.toLowerCase() === 'shipped' ? 'info' : 'warning'}`}>
                                                                     <StatusIcon size={12} strokeWidth={3} />
                                                                     {myStatus}
                                                                 </div>

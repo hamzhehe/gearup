@@ -591,12 +591,11 @@ const ManufacturerTransactionsPage = () => {
             </div>
 
             {/* Top KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 {[
                     { label: 'Total Payments', value: formatPKR(totalAmount), icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50', change: '+12%', trend: 'up' },
                     { label: 'Successful Payments', value: formatPKR(successfulAmount), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', change: '+8%', trend: 'up' },
-                    { label: 'Pending Payments', value: formatPKR(pendingAmount), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', change: '-2%', trend: 'down' },
-                    { label: 'Failed Transactions', value: formatPKR(failedAmount), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', change: '-5%', trend: 'down' }
+                    { label: 'Pending Payments', value: formatPKR(pendingAmount), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', change: '-2%', trend: 'down' }
                 ].map((kpi, idx) => {
                     const Icon = kpi.icon;
                     return (
@@ -610,223 +609,164 @@ const ManufacturerTransactionsPage = () => {
                 })}
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+            <div className="grid grid-cols-1 gap-6 items-start">
                 
-                {/* Transactions Section */}
-                <div className="xl:col-span-3 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-6 border-b border-slate-100">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                            <h2 className="font-heading text-lg font-bold text-slate-800">All Transactions</h2>
-                        </div>
-                        
-                        {/* Filters */}
-                        <div className="filter-bar-enterprise flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-                            <div className="relative flex-1 min-w-[240px]">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Search transactions..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="search-enterprise py-2.5 pl-10 h-auto"
-                                />
-                            </div>
-                            <div className="flex gap-2 flex-1 sm:flex-none">
-                                <select 
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="flex-1 sm:flex-none bg-white border border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-bold rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:border-slate-300 focus:border-[#00A878] focus:ring-2 focus:ring-[#00A878]/20 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                                >
-                                    <option value="All">All Statuses</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Pending">Pending</option>
-                                    <option value="Failed">Failed</option>
-                                    <option value="Refunded">Refunded</option>
-                                </select>
-                                <select 
-                                    value={methodFilter}
-                                    onChange={(e) => setMethodFilter(e.target.value)}
-                                    className="flex-1 sm:flex-none bg-white border border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-bold rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:border-slate-300 focus:border-[#00A878] focus:ring-2 focus:ring-[#00A878]/20 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                                >
-                                    {paymentMethods.map(m => <option key={m} value={m}>{m === 'All' ? 'All Methods' : m}</option>)}
-                                </select>
-                                <select 
-                                    value={dateFilter}
-                                    onChange={(e) => setDateFilter(e.target.value)}
-                                    className="flex-1 sm:flex-none bg-white border border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-bold rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:border-slate-300 focus:border-[#00A878] focus:ring-2 focus:ring-[#00A878]/20 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                                >
-                                    <option value="All Time">All Time</option>
-                                    <option value="Last 7 Days">Last 7 Days</option>
-                                    <option value="Last 30 Days">Last 30 Days</option>
-                                </select>
-                            </div>
+            {/* Transactions Section */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-100">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            {['All', 'platform_wallet', 'escrow_transfer'].map((method) => {
+                                const labels = { 'All': 'All Transactions', 'platform_wallet': 'Wallet Transactions', 'escrow_transfer': 'Bank Transfer' };
+                                const isActive = methodFilter === method || (methodFilter === 'All' && method === 'All') || (method === 'escrow_transfer' && methodFilter === 'Bank Transfer') || (method === 'platform_wallet' && methodFilter === 'Dummy Wallet');
+                                return (
+                                    <button
+                                        key={method}
+                                        onClick={() => setMethodFilter(method === 'escrow_transfer' ? 'Bank Transfer' : method === 'platform_wallet' ? 'platform_wallet' : 'All')}
+                                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+                                            isActive 
+                                            ? 'bg-white text-slate-900 shadow-sm' 
+                                            : 'text-slate-500 hover:text-slate-700'
+                                        }`}
+                                    >
+                                        {labels[method]}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-
-                    {/* Table */}
-                    <div className="table-enterprise mt-0 border-x-0 border-b-0 rounded-t-none">
-                        <div className="w-full overflow-x-auto scrollbar-enterprise">
-                            <table className="min-w-[1000px]">
-                                <thead>
-                                    <tr>
-                                        <th>Transaction ID</th>
-                                        <th>Buyer Name</th>
-                                        <th className="text-right">Amount</th>
-                                        <th>Payment Method</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentTransactions.map((txn) => (
-                                        <tr key={txn._id} className="cursor-pointer" onClick={() => txn.order?._id && router.push(`/manufacturer/orders/${txn.order._id}`)}>
-                                        <td className="px-6 py-4">
-                                            <div className="font-mono text-sm font-bold text-slate-700">{txn._id}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-sm text-slate-900 capitalize">{txn.wholesalerName || 'Unknown Buyer'}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="font-bold text-slate-900 text-sm">{formatPKR(txn.receivedAmount || txn.totalAmount || 0)}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-lg text-xs font-bold text-slate-600 capitalize">
-                                                <CreditCard size={12} /> {txn.paymentMethod || 'N/A'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadge(txn.status)} capitalize`}>
-                                                {txn.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-medium text-slate-500">{new Date(txn.timestamp).toLocaleDateString()}</div>
-                                            <div className="text-xs text-slate-400 mt-0.5">{new Date(txn.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredTransactions.length === 0 && (
-                                    <tr>
-                                        <td colSpan="6" className="px-6 py-32 bg-slate-50/30">
-                                            <div className="flex flex-col items-center justify-center min-w-[300px] max-w-[500px] mx-auto text-center">
-                                                <div className="w-16 h-16 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-sm mb-5">
-                                                    <Inbox className="text-slate-300" size={28} />
-                                                </div>
-                                                <h3 className="text-xl font-heading font-black text-slate-800 tracking-tight mb-2 whitespace-nowrap">No payment records found</h3>
-                                                <p className="text-slate-500 font-medium text-[13px] mb-8 leading-relaxed max-w-[400px]">
-                                                    We couldn't find any transactions for the selected filters or date range.
-                                                </p>
-                                                <button 
-                                                    onClick={() => { setSearchQuery(''); setStatusFilter('All'); setMethodFilter('All'); setDateFilter('All Time'); }}
-                                                    className="px-6 py-2.5 bg-slate-900 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
-                                                >
-                                                    Reset Filters
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                    
+                    {/* Filters */}
+                    <div className="filter-bar-enterprise flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+                        <div className="relative flex-1 min-w-[240px]">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search transactions..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="search-enterprise py-2.5 pl-10 h-auto"
+                            />
+                        </div>
+                        <div className="flex gap-2 flex-1 sm:flex-none">
+                            <select 
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="flex-1 sm:flex-none bg-white border border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-bold rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:border-slate-300 focus:border-[#00A878] focus:ring-2 focus:ring-[#00A878]/20 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                            >
+                                <option value="All">All Statuses</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Failed">Failed</option>
+                                <option value="Refunded">Refunded</option>
+                            </select>
+                            <select 
+                                value={dateFilter}
+                                onChange={(e) => setDateFilter(e.target.value)}
+                                className="flex-1 sm:flex-none bg-white border border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider font-bold rounded-xl px-4 py-2.5 outline-none cursor-pointer hover:border-slate-300 focus:border-[#00A878] focus:ring-2 focus:ring-[#00A878]/20 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                            >
+                                <option value="All Time">All Time</option>
+                                <option value="Last 7 Days">Last 7 Days</option>
+                                <option value="Last 30 Days">Last 30 Days</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
-                            <span className="text-sm text-slate-500 font-medium">
-                                Showing <span className="font-bold text-slate-700">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-700">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> of <span className="font-bold text-slate-700">{filteredTransactions.length}</span> entries
-                            </span>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Previous
-                                </button>
-                                <button 
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Recent Activity */}
-                <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col h-full max-h-[600px]">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="font-heading text-lg font-bold text-slate-800">Recent Activity</h2>
-                        <button className="text-emerald-600 hover:text-emerald-700 text-sm font-bold transition-colors">View All</button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-                        {recentActivity.length > 0 ? recentActivity.map((activity, idx) => {
-                            const isRefund = activity.status.toLowerCase() === 'refunded';
-                            const isPending = activity.status.toLowerCase().includes('pending');
-                            return (
-                                <div key={idx} className="flex gap-4 group">
-                                    <div className="relative">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 border-white shadow-sm z-10 relative ${
-                                            isRefund ? 'bg-slate-100 text-slate-500' : isPending ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
-                                        }`}>
-                                            <Activity size={18} />
+                {/* Table */}
+                <div className="table-enterprise mt-0 border-x-0 border-b-0 rounded-t-none">
+                    <div className="w-full overflow-x-auto scrollbar-enterprise">
+                        <table className="min-w-[1000px]">
+                            <thead>
+                                <tr>
+                                    <th>Transaction ID</th>
+                                    <th>Buyer Name</th>
+                                    <th className="text-right">Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {currentTransactions.map((txn) => (
+                                    <tr key={txn._id} className="cursor-pointer" onClick={() => txn.order?._id && router.push(`/manufacturer/orders/${txn.order._id}`)}>
+                                    <td className="px-6 py-4">
+                                        <div className="font-mono text-sm font-bold text-slate-700">{txn._id}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold text-sm text-slate-900 capitalize">{txn.wholesalerName || 'Unknown Buyer'}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="font-bold text-slate-900 text-sm">{formatPKR(txn.receivedAmount || txn.totalAmount || 0)}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-lg text-xs font-bold text-slate-600 capitalize">
+                                            <CreditCard size={12} /> {txn.paymentMethod || 'N/A'}
                                         </div>
-                                        {idx !== recentActivity.length - 1 && <div className="absolute top-10 bottom-[-24px] left-1/2 w-[2px] bg-slate-100 -translate-x-1/2 z-0"></div>}
-                                    </div>
-                                    <div className="pt-1 pb-2">
-                                        <p className="text-sm font-bold text-slate-800 leading-snug">
-                                            {isRefund ? 'Refund processed' : isPending ? 'Payment settlement pending' : `${formatPKR(activity.receivedAmount || activity.totalAmount || 0)} received`}
-                                        </p>
-                                        <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                            {isRefund ? `Refund to ${activity.wholesalerName || 'Buyer'}` : isPending ? `From ${activity.wholesalerName || 'Buyer'}` : `From ${activity.wholesalerName || 'Buyer'}`}
-                                        </p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">{new Date(activity.timestamp).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                            );
-                        }) : (
-                            <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                                <History size={40} className="text-slate-200 mb-3" />
-                                <p className="text-sm font-medium text-slate-400">No recent activity</p>
-                            </div>
-                        )}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadge(txn.status)} capitalize`}>
+                                            {txn.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm font-medium text-slate-500">{new Date(txn.timestamp).toLocaleDateString()}</div>
+                                        <div className="text-xs text-slate-400 mt-0.5">{new Date(txn.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredTransactions.length === 0 && (
+                                <tr>
+                                    <td colSpan="6" className="px-6 py-32 bg-slate-50/30">
+                                        <div className="flex flex-col items-center justify-center min-w-[300px] max-w-[500px] mx-auto text-center">
+                                            <div className="w-16 h-16 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-sm mb-5">
+                                                <Inbox className="text-slate-300" size={28} />
+                                            </div>
+                                            <h3 className="text-xl font-heading font-black text-slate-800 tracking-tight mb-2 whitespace-nowrap">No payment records found</h3>
+                                            <p className="text-slate-500 font-medium text-[13px] mb-8 leading-relaxed max-w-[400px]">
+                                                We couldn't find any transactions for the selected filters or date range.
+                                            </p>
+                                            <button 
+                                                onClick={() => { setSearchQuery(''); setStatusFilter('All'); setMethodFilter('All'); setDateFilter('All Time'); }}
+                                                className="px-6 py-2.5 bg-slate-900 text-white font-bold text-[11px] uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-colors shadow-sm whitespace-nowrap"
+                                            >
+                                                Reset Filters
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/30">
+                    <span className="text-sm text-slate-500 font-medium">
+                        Showing <span className="font-bold text-slate-700">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-700">{Math.min(currentPage * itemsPerPage, filteredTransactions.length)}</span> of <span className="font-bold text-slate-700">{filteredTransactions.length}</span> entries
+                    </span>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
-
+            )}
             </div>
-
-            <div className="mt-8 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="font-heading text-lg font-black text-slate-900 flex items-center gap-2">
-                        <AlertTriangle className="text-rose-500" size={22} />
-                        Order issues from buyers
-                    </h2>
-                    <Link
-                        href="/manufacturer/disputes"
-                        className="text-xs font-bold uppercase tracking-wider text-emerald-600 hover:underline"
-                    >
-                        Full page →
-                    </Link>
-                </div>
-                {sellerDisputes.length === 0 ? (
-                    <p className="text-sm text-slate-500 bg-white border border-slate-100 rounded-xl p-6">
-                        No buyer issues on your orders right now.
-                    </p>
-                ) : (
-                    sellerDisputes.map((d) => (
-                        <DisputeResolutionCard
-                            key={d._id}
-                            dispute={d}
-                            role="seller"
-                            onRefresh={() => fetchTransactions(true)}
-                        />
-                    ))
-                )}
-            </div>
+        </div>
         </div>
     );
 };

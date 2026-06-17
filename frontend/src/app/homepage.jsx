@@ -4,7 +4,7 @@ import HomepageFeaturedSlider from '../components/ads/HomepageFeaturedSlider';
 import IndustryFocus from '../components/IndustryFocus';
 import HowItWorks from '../components/HowItWorks';
 import MarketTransformation from '../components/MarketTransformation';
-import DataAnalytics from '../components/DataAnalytics';
+
 import GearUpTradeAdvisor from '../components/GearUpTradeAdvisor';
 import TrustCredibility from '../components/TrustCredibility';
 import CallToAction from '../components/CallToAction';
@@ -54,7 +54,7 @@ export default function Homepage() {
       <IndustryFocus />
       <HowItWorks />
       <MarketTransformation />
-      <DataAnalytics />
+
       <GearUpTradeAdvisor />
       <TrustCredibility />
       <CallToAction />

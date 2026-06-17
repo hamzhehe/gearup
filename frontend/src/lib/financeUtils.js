@@ -67,7 +67,6 @@ function isRefundInTimeRange(record, timeRange, bounds) {
 /** Normalize dispute / admin refund payloads into a shared deduction shape. */
 export function buildRefundRecordsFromDisputes(disputes = []) {
     return (disputes || [])
-        .filter((d) => isProcessedRefundRecord(d))
         .map((d) => ({
             seller: d.seller,
             buyer: d.buyer,
@@ -91,6 +90,17 @@ export function sumSellerRefundDeductions(refundRecords, userId, timeRange, boun
     }, 0);
 }
 
+export function countSellerRefunds(refundRecords, userId, timeRange, bounds = null) {
+    const uid = resolveId(userId);
+    if (!uid) return 0;
+
+    return (refundRecords || []).reduce((count, record) => {
+        if (resolveId(record.seller) !== uid) return count;
+        if (!isRefundInTimeRange(record, timeRange, bounds)) return count;
+        return count + 1;
+    }, 0);
+}
+
 export function sumBuyerRefundDeductions(refundRecords, userId, timeRange, bounds = null) {
     const uid = resolveId(userId);
     if (!uid) return 0;
@@ -100,6 +110,17 @@ export function sumBuyerRefundDeductions(refundRecords, userId, timeRange, bound
         if (resolveId(record.buyer) !== uid) return sum;
         if (!isRefundInTimeRange(record, timeRange, bounds)) return sum;
         return sum + (Number(record.refundAmount) || 0);
+    }, 0);
+}
+
+export function countBuyerRefunds(refundRecords, userId, timeRange, bounds = null) {
+    const uid = resolveId(userId);
+    if (!uid) return 0;
+
+    return (refundRecords || []).reduce((count, record) => {
+        if (resolveId(record.buyer) !== uid) return count;
+        if (!isRefundInTimeRange(record, timeRange, bounds)) return count;
+        return count + 1;
     }, 0);
 }
 
@@ -172,11 +193,15 @@ export function getUserFinancialMetrics(orders, userId, refundRecords = [], time
     }
 
     const inRange = (order) => isOrderInTimeRange(order.createdAt, timeRange);
-    const purchaseOrders = orders.filter((o) => inRange(o) && isBuyerOnOrder(o, uid));
+    const completedPurchases = orders.filter((o) => {
+        if (!inRange(o) || !isBuyerOnOrder(o, uid)) return false;
+        const status = (o.status || '').toLowerCase().trim();
+        return status === 'delivered' || status === 'completed';
+    });
     const completedSales = orders.filter((o) => inRange(o) && isCompletedSaleOrder(o, uid));
 
     const revenueMetrics = getNetSalesMetrics(completedSales, uid, refundRecords, timeRange);
-    const spendMetrics = getNetPurchaseMetrics(purchaseOrders, uid, refundRecords, timeRange);
+    const spendMetrics = getNetPurchaseMetrics(completedPurchases, uid, refundRecords, timeRange);
 
     return {
         totalRevenue: revenueMetrics.totalRevenue,

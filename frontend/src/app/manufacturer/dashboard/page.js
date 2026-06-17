@@ -192,7 +192,7 @@ const ManufacturerDashboard = () => {
         const financials = getUserFinancialMetrics(orders, userId, refundRecords, timeRange);
         const revenue = financials.totalRevenue;
         const totalSpend = financials.totalSpend;
-        const filteredCount = financials.salesOrdersCount;
+        const filteredCount = filtered.length;
         const pendingDeliveries = filtered.filter((o) => {
             const status = (o.status || '').toLowerCase();
             return status === 'processing' || status === 'pending';
