@@ -37,6 +37,7 @@ import { formatPKR } from '@/lib/financeUtils';
 import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import { formatMoqDisplay } from '@/utils/moq';
 import { useAuth } from '@/context/AuthContext';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 import {
     SKU_FORMAT_EXAMPLE,
     buildProductSku,
@@ -103,6 +104,7 @@ async function normalizeImagesForSave(images, token) {
 const ProductForm = ({ id }) => {
     const router = useRouter();
     const { user } = useAuth();
+    const { isReadOnlyMode, guardAction } = useReadOnlyMode();
     const isEditMode = !!id;
 
     const [loading, setLoading] = useState(false);
@@ -450,6 +452,7 @@ const ProductForm = ({ id }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!guardAction()) return;
         setLoading(true);
         setError(null);
 
@@ -1162,8 +1165,8 @@ const ProductForm = ({ id }) => {
                         <div className="flex gap-3 flex-col">
                             <button
                                 type="submit"
-                                disabled={loading || Object.keys(validationErrors).length > 0}
-                                className="w-full h-[52px] px-4 bg-[#00A878] text-white font-sans font-[700] text-[15px] rounded-[14px] hover:bg-[#0DBB85] transition-all flex items-center justify-center gap-2 disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] disabled:shadow-none hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed" style={{ boxShadow: loading || Object.keys(validationErrors).length > 0 ? 'none' : '0 12px 24px rgba(0,168,120,0.25)' }}
+                                disabled={loading || isReadOnlyMode || Object.keys(validationErrors).length > 0}
+                                className="w-full h-[52px] px-4 bg-[#00A878] text-white font-sans font-[700] text-[15px] rounded-[14px] hover:bg-[#0DBB85] transition-all flex items-center justify-center gap-2 disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] disabled:shadow-none hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed" style={{ boxShadow: loading || isReadOnlyMode || Object.keys(validationErrors).length > 0 ? 'none' : '0 12px 24px rgba(0,168,120,0.25)' }}
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>

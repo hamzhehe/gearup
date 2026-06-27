@@ -46,10 +46,12 @@ exports.protect = async (req, res, next) => {
     //   token = req.cookies.token;
     // }
 
-    // Make sure token exists
-    if (!token) {
+    // Make sure token exists and is not a corrupted placeholder
+    if (!token || token === 'null' || token === 'undefined') {
         return res.status(401).json({ success: false, error: 'Not authorized to access this route (token missing)' });
     }
+
+    token = token.trim();
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -60,8 +62,24 @@ exports.protect = async (req, res, next) => {
         }
 
         if (req.user.isBlocked) {
-            const reasonText = req.user.blockReason ? ` Reason: ${req.user.blockReason}` : '';
-            return res.status(403).json({ success: false, error: `Your account has been suspended.${reasonText} Please contact support@gearup.com or visit the Contact page for assistance.` });
+            const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+            if (mutatingMethods.includes(req.method)) {
+                const requestPath = (req.originalUrl || '').split('?')[0];
+                const readOnlyAllowedPaths = ['/api/contact'];
+                const isAllowed = readOnlyAllowedPaths.some(
+                    (allowedPath) => requestPath === allowedPath || requestPath.startsWith(`${allowedPath}/`)
+                );
+
+                if (!isAllowed) {
+                    const reasonText = req.user.blockReason ? ` Reason: ${req.user.blockReason}` : '';
+                    return res.status(403).json({
+                        success: false,
+                        error: 'READ_ONLY_MODE',
+                        message: `Your account is suspended and in read-only mode.${reasonText} You cannot perform this action until your account is reactivated.`,
+                        blockReason: req.user.blockReason || ''
+                    });
+                }
+            }
         }
 
         next();

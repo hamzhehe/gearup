@@ -20,8 +20,11 @@ import {
     Layers
 } from 'lucide-react';
 
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
+
 const WholesalerCartPage = () => {
     const router = useRouter();
+    const { isReadOnlyMode, guardAction } = useReadOnlyMode();
     const searchParams = useSearchParams();
 
     const [cartItems, setCartItems] = useState([]);
@@ -425,9 +428,12 @@ const WholesalerCartPage = () => {
                                 </div>
 
                                 <button
-                                    onClick={() => router.push('/wholesaler/orders/checkout')}
-                                    disabled={hasErrors}
-                                    className={`mt-8 w-full h-[56px] rounded-[14px] font-sans font-[800] text-[13px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 group relative overflow-hidden ${hasErrors
+                                    onClick={() => {
+                                        if (!guardAction()) return;
+                                        router.push('/wholesaler/orders/checkout');
+                                    }}
+                                    disabled={hasErrors || isReadOnlyMode}
+                                    className={`mt-8 w-full h-[56px] rounded-[14px] font-sans font-[800] text-[13px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 group relative overflow-hidden ${hasErrors || isReadOnlyMode
                                         ? 'bg-[#FFFFFF]/10 text-[#FFFFFF]/50 cursor-not-allowed backdrop-blur-sm'
                                         : 'bg-[#FFFFFF] text-[#071A35] hover:bg-[#F8FAFC] shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:-translate-y-1'
                                         }`}

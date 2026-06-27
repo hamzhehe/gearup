@@ -15,6 +15,8 @@ import { formatPKR, countSellerRefunds, getUserFinancialMetrics } from '@/lib/fi
 import { isSellerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
 import { useRefundRecords } from '@/hooks/useRefundRecords';
 import { subscribeFinancialSync } from '@/lib/financialSync';
+import { getAuthHeaders } from '@/lib/authToken';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 import {
     Clock,
     AlertCircle,
@@ -40,6 +42,7 @@ import {
 
 const ManufacturerOrdersPage = () => {
     const { user } = useAuth();
+    const { isReadOnlyMode, guardAction } = useReadOnlyMode();
     const [filter, setFilter] = useState('all');
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -55,17 +58,17 @@ const ManufacturerOrdersPage = () => {
     const fetchOrders = useCallback(async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
             const response = await fetch(`${getApiBaseUrl()}/api/orders`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: getAuthHeaders(),
             });
             const data = await response.json();
             if (data.success) {
                 setOrders(data.data);
             } else {
                 setError(data.error);
+                if (response.status === 401) {
+                    setError('Your session has expired. Please sign out and log in again.');
+                }
             }
         } catch (err) {
             setError('Communication loss with order terminal.');
@@ -87,6 +90,7 @@ const ManufacturerOrdersPage = () => {
     const userId = resolveUserId(user);
 
     const handleStatusUpdate = async (orderId, newStatus) => {
+        if (!guardAction()) return;
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`${getApiBaseUrl()}/api/orders/${orderId}/status`, {
@@ -577,7 +581,7 @@ const ManufacturerOrdersPage = () => {
                                                             {/* Action buttons */}
                                                             <td className="px-6 py-4 align-middle whitespace-nowrap text-right">
                                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                                    {myStatus.toLowerCase() === 'pending' && !['pending_approval', 'pending approval'].includes(order.paymentStatus?.toLowerCase()) && (
+                                                                    {!isReadOnlyMode && myStatus.toLowerCase() === 'pending' && !['pending_approval', 'pending approval'].includes(order.paymentStatus?.toLowerCase()) && (
                                                                         <button
                                                                             onClick={() => handleStatusUpdate(order._id, 'processing')}
                                                                             className="h-10 w-10 flex items-center justify-center bg-[#E8FFF5] border border-[#00A878]/20 hover:bg-[#00A878] text-[#00A878] hover:text-white rounded-[10px] transition-all cursor-pointer hover:-translate-y-0.5"
@@ -586,7 +590,7 @@ const ManufacturerOrdersPage = () => {
                                                                             <CheckCircle size={18} />
                                                                         </button>
                                                                     )}
-                                                                    {myStatus.toLowerCase() === 'processing' && (
+                                                                    {!isReadOnlyMode && myStatus.toLowerCase() === 'processing' && (
                                                                         <button
                                                                             onClick={() => handleStatusUpdate(order._id, 'shipped')}
                                                                             className="h-10 w-10 flex items-center justify-center bg-blue-50 border border-blue-200 hover:bg-blue-600 text-blue-600 hover:text-white rounded-[10px] transition-all cursor-pointer hover:-translate-y-0.5"
@@ -595,7 +599,7 @@ const ManufacturerOrdersPage = () => {
                                                                             <Truck size={18} />
                                                                         </button>
                                                                     )}
-                                                                    {myStatus.toLowerCase() === 'shipped' && (
+                                                                    {!isReadOnlyMode && myStatus.toLowerCase() === 'shipped' && (
                                                                         <button
                                                                             onClick={() => handleStatusUpdate(order._id, 'delivered')}
                                                                             className="h-10 w-10 flex items-center justify-center bg-[#E8FFF5] border border-[#00A878]/20 hover:bg-[#00A878] text-[#00A878] hover:text-white rounded-[10px] transition-all cursor-pointer hover:-translate-y-0.5"
@@ -700,7 +704,7 @@ const ManufacturerOrdersPage = () => {
                                                         Invoice
                                                     </button>
 
-                                                    {myStatus.toLowerCase() === 'pending' && !['pending_approval', 'pending approval'].includes(order.paymentStatus?.toLowerCase()) && (
+                                                    {!isReadOnlyMode && myStatus.toLowerCase() === 'pending' && !['pending_approval', 'pending approval'].includes(order.paymentStatus?.toLowerCase()) && (
                                                         <button
                                                             onClick={() => handleStatusUpdate(order._id, 'processing')}
                                                             className="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-body font-black text-xs uppercase tracking-widest transition-all border border-emerald-100 cursor-pointer"
@@ -708,7 +712,7 @@ const ManufacturerOrdersPage = () => {
                                                             Accept
                                                         </button>
                                                     )}
-                                                    {myStatus.toLowerCase() === 'processing' && (
+                                                    {!isReadOnlyMode && myStatus.toLowerCase() === 'processing' && (
                                                         <button
                                                             onClick={() => handleStatusUpdate(order._id, 'shipped')}
                                                             className="flex-1 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-body font-black text-xs uppercase tracking-widest transition-all border border-blue-100 cursor-pointer"
@@ -716,7 +720,7 @@ const ManufacturerOrdersPage = () => {
                                                             Mark shipped
                                                         </button>
                                                     )}
-                                                    {myStatus.toLowerCase() === 'shipped' && (
+                                                    {!isReadOnlyMode && myStatus.toLowerCase() === 'shipped' && (
                                                         <button
                                                             onClick={() => handleStatusUpdate(order._id, 'delivered')}
                                                             className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl font-body font-black text-xs uppercase tracking-widest transition-all shadow-sm shadow-emerald-500/20 cursor-pointer"

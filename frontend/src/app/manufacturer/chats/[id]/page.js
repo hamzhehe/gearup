@@ -5,6 +5,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import { 
     ArrowLeft, 
     Send, 
@@ -140,19 +141,8 @@ export default function ManufacturerChatThreadPage() {
         }
     };
 
-    const getProductImage = (item) => {
-    const productData = item?.product;
-    const imgUrl = productData?.image || productData?.images?.[0];
-    if (!imgUrl) return null;
-    // Return absolute URLs directly
-    if (imgUrl.startsWith('http')) return imgUrl;
-    // Ensure proper slash handling when concatenating with API base URL
-    if (imgUrl.startsWith('/')) {
-        return `${getApiBaseUrl()}${imgUrl}`;
-    }
-    // Relative path without leading slash
-    return `${getApiBaseUrl()}/${imgUrl}`;
-};
+    const getProductImage = (item) =>
+        resolveProductImageUrl(item?.product?.image || item?.product?.images?.[0]);
 
     const formatTime = (isoString) => {
         if (!isoString) return '';

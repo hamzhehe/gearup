@@ -33,6 +33,7 @@ import { formatPKR, sumBuyerRefundDeductions, countBuyerRefunds, getUserFinancia
 import { isBuyerOnOrder, resolveUserId } from '@/lib/dashboardAnalytics';
 import { useRefundRecords } from '@/hooks/useRefundRecords';
 import { subscribeFinancialSync } from '@/lib/financialSync';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 
 const WholesalerOrdersPage = () => {
     const { user } = useAuth();
@@ -431,7 +432,7 @@ const WholesalerOrdersPage = () => {
                                                                     <div className="w-10 h-10 bg-[#F8FAFC] border border-[#E5E7EB] rounded-[10px] flex items-center justify-center shrink-0 overflow-hidden">
                                                                         {order.items?.[0]?.product?.images?.[0] || order.items?.[0]?.image ? (
                                                                             <img 
-                                                                                src={order.items[0].product?.images?.[0] || order.items[0].image} 
+                                                                                src={resolveProductImageUrl(order.items[0].product?.images?.[0] || order.items[0].image)}
                                                                                 className="w-full h-full object-cover"
                                                                             />
                                                                         ) : (
@@ -544,7 +545,7 @@ const WholesalerOrdersPage = () => {
                                                         <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
                                                             {order.items?.[0]?.product?.images?.[0] || order.items?.[0]?.image ? (
                                                                 <img 
-                                                                    src={order.items[0].product?.images?.[0] || order.items[0].image} 
+                                                                    src={resolveProductImageUrl(order.items[0].product?.images?.[0] || order.items[0].image)} 
                                                                     className="w-full h-full object-cover"
                                                                 />
                                                             ) : (

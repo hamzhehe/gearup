@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { HelpCircle, MessageSquare, PhoneCall, Clock, FileText, Zap } from 'lucide-react';
+import { HelpCircle, MessageSquare, Clock, FileText, Zap } from 'lucide-react';
 
 const SupportCard = ({ className = "" }) => {
   return (
@@ -74,15 +74,6 @@ const SupportCard = ({ className = "" }) => {
             <span className="text-[11px] font-[800] text-[#0F172A]">Operational</span>
           </div>
         </div>
-
-        {/* CTA Button */}
-        <button
-          onClick={() => window.open('/contact', '_blank')}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-[13px] transition-all duration-300 shadow-[0_8px_24px_rgba(15,23,42,0.15)] hover:shadow-[0_12px_28px_rgba(15,23,42,0.25)] hover:-translate-y-0.5 active:translate-y-0"
-        >
-          <PhoneCall size={16} strokeWidth={2} />
-          Contact Support
-        </button>
       </div>
     </div>
   );

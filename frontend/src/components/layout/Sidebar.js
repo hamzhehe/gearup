@@ -16,6 +16,7 @@ import {
   BarChart3,
   Settings,
   HelpCircle,
+  LifeBuoy,
   X,
   LogOut,
   Users,
@@ -98,6 +99,7 @@ const Sidebar = ({
         { label: 'Seller Chats', path: '/wholesaler/chats', icon: MessageSquare, hasNotification: unreadChats },
         { label: 'Payments', path: '/manufacturer/transactions', icon: Banknote },
         { label: 'Order Issues', path: '/manufacturer/disputes', icon: AlertTriangle },
+        { label: 'Support Requests', path: '/wholesaler/support', icon: LifeBuoy },
         { label: 'Analytics', path: '/manufacturer/analytics', icon: BarChart3 },
       ];
     }
@@ -111,6 +113,7 @@ const Sidebar = ({
       { label: 'Seller Chats', path: '/manufacturer/chats', icon: MessageSquare, hasNotification: unreadChats },
       { label: 'Payments', path: '/manufacturer/transactions', icon: Banknote },
       { label: 'Order Issues', path: '/manufacturer/disputes', icon: AlertTriangle },
+      { label: 'Support Requests', path: '/manufacturer/support', icon: LifeBuoy },
       { label: 'Analytics', path: '/manufacturer/analytics', icon: BarChart3 },
     ];
 

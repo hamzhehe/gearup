@@ -5,8 +5,8 @@ import Link from 'next/link';
 import {
   Package, Pause, Play, BarChart3, Trash2, Copy, Sparkles, Clock, TrendingUp, StopCircle,
 } from 'lucide-react';
-import { getApiBaseUrl } from '@/lib/api';
 import { formatPKR } from '@/lib/financeUtils';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import { CAMPAIGN_STATUSES, CAMPAIGN_TYPES } from '@/lib/advertisingConfig';
 import { formatAdDate, formatDaysRemaining } from '@/lib/adDateUtils';
 import CampaignActionButton from '@/components/advertising/CampaignActionButton';
@@ -23,13 +23,7 @@ const STATUS_STYLES = {
 };
 
 function getImageUrl(product) {
-  const raw = product?.images?.[0] || product?.image;
-  if (!raw) return null;
-  const urlString = typeof raw === 'string' ? raw : (raw.url || raw.path || '');
-  if (!urlString) return null;
-  if (urlString.startsWith('http') || urlString.startsWith('data:')) return urlString;
-  const baseUrl = getApiBaseUrl();
-  return `${baseUrl}${urlString.startsWith('/') ? '' : '/'}${urlString}`;
+  return resolveProductImageUrl(product?.images?.[0] || product?.image);
 }
 
 function getCampaignTypeLabel(type) {

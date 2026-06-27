@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Package, ShoppingCart, FileText, Search, MessageSquare, Users } from 'lucide-react';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 
 const defaultActions = [
   { label: 'Add product', route: '/manufacturer/products/new', tone: 'teal' },
@@ -19,6 +20,15 @@ const TONE = {
 };
 
 const QuickActionsCard = ({ actions = defaultActions }) => {
+  const { isReadOnlyMode } = useReadOnlyMode();
+  const visibleActions = isReadOnlyMode
+    ? actions.filter((action) => {
+        const label = action.label?.toLowerCase() || '';
+        const route = action.route?.toLowerCase() || '';
+        return !label.includes('add product') && !route.includes('/new') && !route.includes('checkout');
+      })
+    : actions;
+
   const getIcon = (label) => {
     const l = label.toLowerCase();
     if (l.includes('product') || l.includes('purchases')) return Package;
@@ -74,7 +84,7 @@ const QuickActionsCard = ({ actions = defaultActions }) => {
 
       {/* Action Buttons - Top Right */}
       <div className="relative z-10 p-4 flex flex-col gap-2 items-start flex-1">
-        {actions.map((action, i) => {
+        {visibleActions.map((action, i) => {
           const Icon = getIcon(action.label);
           return (
             <Link

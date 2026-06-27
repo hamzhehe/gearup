@@ -237,7 +237,8 @@ const MarketplacePage = ({ isDashboard = true }) => {
         moq: 'all',
         location: 'all',
         verifiedOnly: false,
-        searchQuery: ''
+        searchQuery: '',
+        sellerType: 'all',
     });
 
     const [sortBy, setSortBy] = useState('newest');
@@ -408,6 +409,7 @@ const MarketplacePage = ({ isDashboard = true }) => {
             ) {
                 return false;
             }
+            if (filters.sellerType !== 'all' && product.sellerRole !== filters.sellerType) return false;
             return true;
         });
     }, [filters]);
@@ -526,6 +528,17 @@ const MarketplacePage = ({ isDashboard = true }) => {
                     ))}
                 </select>
 
+                {/* Seller Type Dropdown */}
+                <select
+                    value={filters.sellerType}
+                    onChange={(e) => handleFilterChange('sellerType', e.target.value)}
+                    className="h-[56px] px-4 bg-[#FFFFFF] border border-[#E5E7EB] rounded-[14px] font-sans font-[700] text-[12px] uppercase tracking-wider text-[#0F172A] outline-none hover:border-[#94A3B8] transition-all appearance-none cursor-pointer shadow-[0_2px_4px_rgba(15,23,42,0.02)] focus:border-[#00A878] focus:ring-[4px] focus:ring-[#00A878]/10"
+                >
+                    <option value="all">Seller Type: All</option>
+                    <option value="manufacturer">Manufacturer</option>
+                    <option value="wholesaler">Wholesaler</option>
+                </select>
+
                 {/* Highly Scalable Searchable Location Dropdown */}
                 <SearchableLocationDropdown
                     value={filters.location}
@@ -561,10 +574,10 @@ const MarketplacePage = ({ isDashboard = true }) => {
                 </select>
 
                 {/* Reset button */}
-                {(filters.industry !== 'all' || filters.location !== 'all' || filters.verifiedOnly || filters.searchQuery || sortBy !== 'newest') && (
+                {(filters.industry !== 'all' || filters.location !== 'all' || filters.verifiedOnly || filters.searchQuery || filters.sellerType !== 'all' || sortBy !== 'newest') && (
                     <button
                         onClick={() => {
-                            setFilters({ industry: 'all', moq: 'all', location: 'all', verifiedOnly: false, searchQuery: '' });
+                            setFilters({ industry: 'all', moq: 'all', location: 'all', verifiedOnly: false, searchQuery: '', sellerType: 'all' });
                             setSortBy('newest');
                         }}
                         className="flex items-center gap-1.5 h-[56px] px-4 bg-[#FEF2F2] text-[#EF4444] rounded-[14px] font-sans font-[700] text-[11px] uppercase tracking-widest hover:bg-[#EF4444] hover:text-[#FFFFFF] transition-all ml-auto md:ml-0 shadow-sm hover:shadow-md"

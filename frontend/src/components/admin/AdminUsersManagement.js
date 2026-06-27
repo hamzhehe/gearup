@@ -8,6 +8,7 @@ import { Users, Search, Ban, CheckCircle, Building2, Store } from 'lucide-react'
 import toast from 'react-hot-toast';
 import AdminPageShell from '@/components/admin/AdminPageShell';
 import AdminUserDetailDrawer, { StatusBadge, RoleBadge } from '@/components/admin/AdminUserDetailDrawer';
+import AdminSuspendUserModal from '@/components/admin/AdminSuspendUserModal';
 import UserAvatar from '@/components/ui/UserAvatar';
 
 const ROLE_TABS = [
@@ -39,6 +40,8 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [suspendTarget, setSuspendTarget] = useState(null);
+  const [suspendLoading, setSuspendLoading] = useState(false);
   const itemsPerPage = 10;
   const router = useRouter();
   const pathname = usePathname();
@@ -90,27 +93,18 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
     };
   }, [selectedUser]);
 
-  const handleBlockToggle = async (userId, isBlocked) => {
-    let reason = '';
-    if (!isBlocked) {
-      const input = window.prompt('Please provide a reason for suspending this user:');
-      if (input === null) return; // User cancelled
-      reason = input.trim();
-    } else {
-      if (!window.confirm('Are you sure you want to activate this user?')) return;
-    }
-
+  const performBlockToggle = async (userId, isBlocked, reason = '') => {
     const token = localStorage.getItem('token');
     const endpoint = isBlocked ? 'unblock' : 'block';
 
     try {
       const res = await fetch(`${getApiBaseUrl()}/api/admin/users/${userId}/${endpoint}`, {
         method: 'PUT',
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ reason }),
       });
       const data = await res.json();
       if (data.success) {
@@ -125,6 +119,30 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
       }
     } catch {
       toast.error('Network error');
+    }
+  };
+
+  const handleBlockToggle = async (userId, isBlocked) => {
+    if (!isBlocked) {
+      const targetUser =
+        users.find((user) => user._id === userId) ||
+        (selectedUser?._id === userId ? selectedUser : null);
+      setSuspendTarget(targetUser || { _id: userId, name: 'User', email: '' });
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to activate this user?')) return;
+    await performBlockToggle(userId, true);
+  };
+
+  const handleSuspendConfirm = async (reason) => {
+    if (!suspendTarget?._id) return;
+    setSuspendLoading(true);
+    try {
+      await performBlockToggle(suspendTarget._id, false, reason);
+      setSuspendTarget(null);
+    } finally {
+      setSuspendLoading(false);
     }
   };
 
@@ -372,6 +390,16 @@ function AdminUsersInner({ roleFilter = 'all', pageTitle = 'Users', pageDescript
         transactions={transactions}
         onClose={() => setSelectedUser(null)}
         onBlockToggle={handleBlockToggle}
+      />
+
+      <AdminSuspendUserModal
+        open={!!suspendTarget}
+        user={suspendTarget}
+        loading={suspendLoading}
+        onCancel={() => {
+          if (!suspendLoading) setSuspendTarget(null);
+        }}
+        onConfirm={handleSuspendConfirm}
       />
     </div>
   );

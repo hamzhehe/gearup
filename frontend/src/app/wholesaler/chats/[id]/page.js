@@ -5,6 +5,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import { 
     ArrowLeft, 
     Send, 
@@ -126,13 +127,8 @@ export default function WholesalerChatThreadPage() {
         }
     };
 
-    const getProductImage = (item) => {
-        const productData = item?.product;
-        const imgUrl = productData?.image || productData?.images?.[0];
-        if (!imgUrl) return null;
-        if (imgUrl.startsWith('http')) return imgUrl;
-        return `${getApiBaseUrl()}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`;
-    };
+    const getProductImage = (item) =>
+        resolveProductImageUrl(item?.product?.image || item?.product?.images?.[0]);
 
     const formatTime = (isoString) => {
         if (!isoString) return '';

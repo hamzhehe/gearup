@@ -27,6 +27,7 @@ import {
     Layers
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { resolveProductImageUrl, PRODUCT_PLACEHOLDER } from '@/lib/marketplaceData';
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
@@ -60,7 +61,9 @@ const ProductDetailsPage = () => {
                     id: p._id,
                     name: p.name,
                     category: p.category || 'Cricket',
-                    images: p.images?.length > 0 ? p.images : [null],
+                    images: p.images?.length > 0
+                        ? p.images.map((img) => resolveProductImageUrl(img))
+                        : [resolveProductImageUrl(null)],
                     sellerId,
                     seller: {
                         name: p.seller?.name || 'Unknown Seller',
@@ -187,7 +190,10 @@ const ProductDetailsPage = () => {
                                     src={product.images[selectedImage]}
                                     alt={product.name}
                                     className="w-full h-full object-contain rounded-[16px] group-hover:scale-[1.05] transition-transform duration-700 ease-out"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src = PRODUCT_PLACEHOLDER;
+                                    }}
                                 />
                             ) : (
                                 <div className="w-full h-full bg-[#F8FAFC] flex items-center justify-center text-[#94A3B8] rounded-[16px]">
@@ -210,7 +216,10 @@ const ProductDetailsPage = () => {
                                         }`}
                                     >
                                         {img ? (
-                                            <img src={img} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                            <img src={img} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} onError={(e) => {
+                                                e.currentTarget.onerror = null;
+                                                e.currentTarget.src = PRODUCT_PLACEHOLDER;
+                                            }} />
                                         ) : (
                                             <div className="w-full h-full bg-[#F8FAFC] flex items-center justify-center text-[#94A3B8]">
                                                 <Package size={20} />

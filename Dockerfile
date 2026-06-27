@@ -9,6 +9,9 @@ COPY backend/ ./
 
 RUN mkdir -p uploads config
 
+# Persist user uploads across container restarts when Railway volume is mounted at /app/uploads
+VOLUME ["/app/uploads"]
+
 ENV NODE_ENV=production
 
 CMD ["npm", "start"]

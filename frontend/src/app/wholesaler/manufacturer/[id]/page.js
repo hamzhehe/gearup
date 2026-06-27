@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { PLATFORM_MOQ } from '@/utils/moq';
 import { normalizeLoadedPackSize } from '@/lib/bulkPackaging';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 
 const ManufacturerProfilePage = () => {
     const { id } = useParams();
@@ -78,7 +79,7 @@ const ManufacturerProfilePage = () => {
                 setAllProducts(pData.data.map(p => ({
                     id: p?._id,
                     name: p?.name || 'Product',
-                    image: p?.images?.[0] || null,
+                    image: resolveProductImageUrl(p?.images?.[0] || null),
                     price: p?.price || 0,
                     stock: p?.stock || 0,
                     moq: p?.minimumOrderQuantity || 1,

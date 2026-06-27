@@ -22,7 +22,10 @@ router.get('/analytics', getAnalytics);
 router.get('/settings', require('../controllers/adminController').getSettings);
 router.put('/settings', require('../controllers/adminController').updateSettings);
 router.get('/contact-messages', require('../controllers/adminController').getContactMessages);
+router.get('/contact-messages/:id', require('../controllers/adminController').getContactMessageById);
 router.post('/contact-messages/:id/reply', require('../controllers/adminController').replyContactMessage);
+router.put('/contact-messages/:id/status', require('../controllers/adminController').updateContactMessageStatus);
+router.put('/contact-messages/:id/close', require('../controllers/adminController').closeContactMessage);
 
 // Admin product management
 router.get('/products', getProducts);

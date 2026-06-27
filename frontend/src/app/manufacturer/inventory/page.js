@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getApiBaseUrl } from '@/lib/api';
 import Skeleton from '@/components/common/Skeleton';
 import { useAuth } from '@/context/AuthContext';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 import { useRouter } from 'next/navigation';
 import { isLowStock, isOutOfStock, isHealthyStock } from '@/utils/inventory';
 import {
@@ -21,6 +22,7 @@ const COLORS = ['#00A878', '#3B82F6', '#F59E0B', '#F43F5E', '#8B5CF6'];
 
 export default function InventoryOverviewPage() {
     const { user } = useAuth();
+    const { isReadOnlyMode } = useReadOnlyMode();
     const router = useRouter();
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -207,12 +209,14 @@ export default function InventoryOverviewPage() {
                             <RefreshCw size={16} className={`${syncing ? 'animate-spin text-[#00A878]' : ''}`} />
                             {syncing ? 'Syncing...' : 'Sync Inventory'}
                         </button>
+                        {!isReadOnlyMode && (
                         <button 
                             onClick={() => router.push('/manufacturer/products/new')}
                             className="flex items-center gap-2 bg-[#00A878] hover:bg-[#0DBB85] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_4px_12px_-4px_rgba(0,200,117,0.4)] hover:shadow-[0_8px_16px_-6px_rgba(0,200,117,0.5)] hover:-translate-y-0.5 outline-none"
                         >
                             <ShoppingCart size={16} /> Replenish Stock
                         </button>
+                        )}
                     </div>
                 </div>
 

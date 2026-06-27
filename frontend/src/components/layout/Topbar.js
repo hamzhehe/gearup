@@ -27,7 +27,7 @@ const Topbar = ({
   isSidebarOpen = true,
   isMobile = false
 }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, isReadOnlyMode } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -138,7 +138,7 @@ const Topbar = ({
                 <MessageSquare size={20} />
                 <ChatNotificationBadge />
               </Link>
-              <Link href="/wholesaler/cart" className="icon-wrapper relative">
+              <Link href="/wholesaler/cart" className={`icon-wrapper relative ${isReadOnlyMode ? 'pointer-events-none opacity-40' : ''}`} aria-disabled={isReadOnlyMode} title={isReadOnlyMode ? 'Cart unavailable in read-only mode' : 'Cart'}>
                 <ShoppingCart size={20} />
                 {cartCount > 0 && (
                   <span className={badgeClass}>{cartCount > 99 ? '99+' : cartCount}</span>

@@ -33,6 +33,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import InvoiceModal from '@/components/shared/InvoiceModal';
 import { formatPKR } from '@/lib/financeUtils';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 
 const OrderDetailsPage = ({ params }) => {
     const resolvedParams = React.use(params);
@@ -203,12 +204,8 @@ const OrderDetailsPage = ({ params }) => {
         return themes[status] || themes[status?.toLowerCase()] || { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-100', icon: Clock, label: status };
     };
 
-    const getProductImage = (item) => {
-        const imgUrl = item.product?.image || item.product?.images?.[0];
-        if (!imgUrl) return null;
-        if (imgUrl.startsWith('http')) return imgUrl;
-        return `${getApiBaseUrl()}${imgUrl}`;
-    };
+    const getProductImage = (item) =>
+        resolveProductImageUrl(item.product?.image || item.product?.images?.[0] || item.image);
 
     if (loading) {
         return (

@@ -18,6 +18,7 @@ import { formatMoqDisplay, formatStockWithUnit } from '@/utils/moq';
 import { normalizeLoadedPackSize } from '@/lib/bulkPackaging';
 import VerificationStatusBanner from '@/components/shared/VerificationStatusBanner';
 import { isApprovedVerification } from '@/lib/verificationStats';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 import {
     Plus,
     Edit,
@@ -28,13 +29,13 @@ import {
     Search,
     Filter,
     AlertCircle,
-    Clock,
     MoreVertical,
     CheckCircle
 } from 'lucide-react';
 
 const ProductsPage = () => {
     const { user } = useAuth();
+    const { isReadOnlyMode, guardAction } = useReadOnlyMode();
     const router = useRouter();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -46,26 +47,8 @@ const ProductsPage = () => {
     const [deletingProductId, setDeletingProductId] = useState(null);
     const [successToast, setSuccessToast] = useState(null);
     const [errorToast, setErrorToast] = useState(null);
-    const [lastUpdated, setLastUpdated] = useState(new Date());
-    const [currentTime, setCurrentTime] = useState(new Date());
 
     const isVerified = isApprovedVerification(user);
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 60000); // Update relative time every minute
-        return () => clearInterval(timer);
-    }, []);
-
-    const getRelativeTime = (updatedDate) => {
-        const diffMs = currentTime.getTime() - updatedDate.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        if (diffMins < 1) return 'Updated just now';
-        if (diffMins === 1) return 'Updated 1 min ago';
-        if (diffMins < 60) return `Updated ${diffMins} mins ago`;
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffHours === 1) return 'Updated 1 hour ago';
-        return `Updated ${diffHours} hours ago`;
-    };
 
     const fetchProducts = useCallback(async () => {
         try {
@@ -94,7 +77,6 @@ const ProductsPage = () => {
                     category: p.category || 'General',
                     sku: p.sku || 'N/A'
                 })));
-                setLastUpdated(new Date());
             }
         } catch (err) {
             console.error('Failed to fetch products', err);
@@ -124,6 +106,7 @@ const ProductsPage = () => {
     };
 
     const handleDelete = async (productId) => {
+        if (!guardAction()) return;
         console.log("Delete button clicked for product ID:", productId);
         if (!productId) {
             console.error("Delete failed: Product ID is undefined");
@@ -159,7 +142,6 @@ const ProductsPage = () => {
                 
                 // Update UI instantly
                 setProducts(prev => prev.filter(p => p.id !== productId));
-                setLastUpdated(new Date());
                 
                 // Show success toast
                 setSuccessToast("Product deleted successfully");
@@ -231,14 +213,11 @@ const ProductsPage = () => {
                                 {products.some(p => p.status === 'Low Stock' || p.status === 'Out of Stock') ? <AlertCircle size={14} /> : <CheckCircle size={14} />}
                                 {products.filter(p => p.status === 'Low Stock' || p.status === 'Out of Stock').length} Low Stock
                             </div>
-                            <div className="flex items-center h-[36px] gap-2 px-3 text-[11px] sm:text-[12px] font-[600] text-[#94A3B8] tracking-wide">
-                                <Clock size={14} /> {getRelativeTime(lastUpdated)}
-                            </div>
                         </div>
                     </div>
                 </div>
                 <div className="flex shrink-0 mt-2 lg:mt-0">
-                    {isVerified ? (
+                    {isVerified && !isReadOnlyMode ? (
                         <Link
                             href="/manufacturer/products/new"
                             className="flex items-center justify-center gap-2 px-6 py-3.5 w-full sm:w-auto bg-[#00A878] hover:bg-[#0DBB85] text-white rounded-[14px] font-[700] text-[15px] transition-all duration-300 shadow-[0_12px_24px_rgba(0,168,120,0.25)] hover:-translate-y-[2px]"
@@ -412,6 +391,7 @@ const ProductsPage = () => {
                                             >
                                                 <Eye size={16} />
                                             </button>
+                                            {!isReadOnlyMode && (
                                             <Link
                                                 href={`/manufacturer/products/edit/${product.id}`}
                                                 className="action-btn-icon"
@@ -419,6 +399,8 @@ const ProductsPage = () => {
                                             >
                                                 <Edit size={16} />
                                             </Link>
+                                            )}
+                                            {!isReadOnlyMode && (
                                             <button
                                                 type="button"
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmProduct(product); }}
@@ -432,6 +414,7 @@ const ProductsPage = () => {
                                                     <Trash2 size={16} />
                                                 )}
                                             </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

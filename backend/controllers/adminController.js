@@ -278,10 +278,13 @@ exports.updateVerificationNotes = async (req, res, next) => {
 // @access  Private/Admin
 exports.blockUser = async (req, res, next) => {
     try {
-        const { reason } = req.body;
+        const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : '';
+        if (!reason) {
+            return res.status(400).json({ success: false, error: 'Suspension reason is required' });
+        }
         const user = await User.findByIdAndUpdate(
             req.params.id,
-            { isBlocked: true, blockReason: reason || '' },
+            { isBlocked: true, blockReason: reason },
             { new: true, runValidators: false }
         );
         if (!user) {
@@ -546,10 +549,78 @@ exports.markPayoutAsPaid = async (req, res, next) => {
 exports.getContactMessages = async (req, res, next) => {
     try {
         const ContactSubmission = require('../models/ContactSubmission');
+        const { formatTicketId } = require('../controllers/contactController');
         const messages = await ContactSubmission.find().sort({ createdAt: -1 });
-        res.status(200).json({ success: true, count: messages.length, data: messages });
+        const data = messages.map((message) => ({
+            ...message.toObject(),
+            ticketId: formatTicketId(message._id),
+        }));
+        res.status(200).json({ success: true, count: data.length, data });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Server error retrieving contact messages' });
+    }
+};
+
+exports.getContactMessageById = async (req, res) => {
+    try {
+        const ContactSubmission = require('../models/ContactSubmission');
+        const { formatTicketId } = require('../controllers/contactController');
+        const message = await ContactSubmission.findById(req.params.id);
+        if (!message) {
+            return res.status(404).json({ success: false, error: 'Contact message not found' });
+        }
+        res.status(200).json({
+            success: true,
+            data: {
+                ...message.toObject(),
+                ticketId: formatTicketId(message._id),
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Server error retrieving contact message' });
+    }
+};
+
+exports.updateContactMessageStatus = async (req, res) => {
+    try {
+        const ContactSubmission = require('../models/ContactSubmission');
+        const { status } = req.body;
+        const allowed = ['open', 'in_progress', 'replied', 'closed'];
+        if (!allowed.includes(status)) {
+            return res.status(400).json({ success: false, error: 'Invalid support ticket status' });
+        }
+
+        const submission = await ContactSubmission.findById(req.params.id);
+        if (!submission) {
+            return res.status(404).json({ success: false, error: 'Contact message not found' });
+        }
+
+        submission.status = status;
+        if (status === 'replied') {
+            submission.isReplied = true;
+        }
+        await submission.save();
+
+        res.status(200).json({ success: true, data: submission });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Failed to update support ticket status' });
+    }
+};
+
+exports.closeContactMessage = async (req, res) => {
+    try {
+        const ContactSubmission = require('../models/ContactSubmission');
+        const submission = await ContactSubmission.findById(req.params.id);
+        if (!submission) {
+            return res.status(404).json({ success: false, error: 'Contact message not found' });
+        }
+
+        submission.status = 'closed';
+        await submission.save();
+
+        res.status(200).json({ success: true, data: submission });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Failed to close support ticket' });
     }
 };
 
@@ -557,49 +628,100 @@ exports.replyContactMessage = async (req, res) => {
     try {
         const { id } = req.params;
         const { replyMessage } = req.body;
+        const { sanitizeText, formatTicketId } = require('../controllers/contactController');
+        const sanitizedReply = sanitizeText(replyMessage, 5000);
 
-        if (!replyMessage || !replyMessage.trim()) {
+        if (!sanitizedReply) {
             return res.status(400).json({ success: false, error: 'Reply message cannot be empty' });
         }
 
         const ContactSubmission = require('../models/ContactSubmission');
+        const User = require('../models/User');
         const sendEmail = require('../utils/sendEmail');
+        const { createNotification } = require('./notificationController');
 
         const submission = await ContactSubmission.findById(id);
         if (!submission) {
             return res.status(404).json({ success: false, error: 'Contact message not found' });
         }
+        if (submission.status === 'closed') {
+            return res.status(400).json({ success: false, error: 'This support ticket is closed' });
+        }
 
-        // Send Email
-        const emailHtml = `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
-                <h2 style="color: #0F172A;">GearUp Support</h2>
-                <p>Hi ${submission.name},</p>
-                <p>Thank you for reaching out to us. An administrator has responded to your inquiry:</p>
-                <div style="background-color: #F8FAFC; padding: 16px; border-left: 4px solid #00A878; margin: 20px 0;">
-                    <p style="margin: 0; white-space: pre-wrap;">${replyMessage}</p>
-                </div>
-                <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
-                <p style="font-size: 14px; color: #64748B;">Your Original Message:</p>
-                <blockquote style="font-size: 14px; color: #64748B; font-style: italic; border-left: 2px solid #E5E7EB; padding-left: 12px; margin-left: 0;">
-                    ${submission.message}
-                </blockquote>
-                <p style="margin-top: 32px; font-size: 12px; color: #94A3B8;">GearUp B2B Marketplace &copy; ${new Date().getFullYear()}</p>
-            </div>
-        `;
-
-        await sendEmail({
-            email: submission.email,
-            subject: `Re: Your Inquiry to GearUp (${submission.type})`,
-            html: emailHtml
+        const adminName = req.user?.name || 'GearUp Support Team';
+        submission.replies.push({
+            message: sanitizedReply,
+            adminName,
+            admin: req.user.id,
+            createdAt: new Date(),
         });
-
+        submission.status = 'replied';
         submission.isReplied = true;
         await submission.save();
 
-        res.json({ success: true, message: 'Reply sent successfully' });
+        const isSuspensionAppeal = submission.category === 'Suspension Appeal';
+        const emailSubject = isSuspensionAppeal
+            ? 'GearUp Support – Suspension Appeal Update'
+            : 'GearUp Support – Reply to Your Request';
+
+        const emailHtml = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
+                <h2 style="color: #0F172A;">GearUp Support</h2>
+                <p>Hello ${submission.name},</p>
+                <p>Thank you for contacting GearUp Support.</p>
+                <p>We have reviewed your support request.</p>
+                <p style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Support Reply</p>
+                <div style="background-color: #F8FAFC; padding: 16px; border-left: 4px solid #00A878; margin: 20px 0;">
+                    <p style="margin: 0; white-space: pre-wrap;">${sanitizedReply}</p>
+                </div>
+                <p>If further action is required, you may reply to this email or submit another support request.</p>
+                <p style="margin-top: 24px;">Regards,<br/>GearUp Support Team</p>
+                <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 24px 0;" />
+                <p style="font-size: 12px; color: #94A3B8;">Ticket ${formatTicketId(submission._id)} &copy; ${new Date().getFullYear()}</p>
+            </div>
+        `;
+
+        let emailSent = true;
+        try {
+            await sendEmail({
+                email: submission.email,
+                subject: emailSubject,
+                html: emailHtml,
+            });
+        } catch (emailError) {
+            emailSent = false;
+            console.error('[Support Reply] Email failed:', emailError.message);
+        }
+
+        if (submission.user) {
+            try {
+                const ticketUser = await User.findById(submission.user).select('role');
+                const supportLink =
+                    ticketUser?.role === 'wholesaler' ? '/wholesaler/support' : '/manufacturer/support';
+                await createNotification(
+                    submission.user,
+                    'Support replied to your request.',
+                    'system',
+                    supportLink
+                );
+            } catch (notifyError) {
+                console.error('[Support Reply] Notification failed:', notifyError.message);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: emailSent
+                ? 'Reply sent successfully'
+                : 'Reply saved successfully. Email could not be sent.',
+            emailSent,
+            data: {
+                ...submission.toObject(),
+                ticketId: formatTicketId(submission._id),
+            },
+        });
     } catch (error) {
         console.error('Error replying to contact message:', error);
-        res.status(500).json({ success: false, error: 'Failed to send reply' });
+        res.status(500).json({ success: false, error: 'Failed to save reply' });
     }
 };

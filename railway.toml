@@ -7,3 +7,9 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
+
+# Path 3A — Railway persistent volume for upload files.
+# Create a volume named "gearup-uploads" in the Railway dashboard, then attach this mount.
+[[deploy.volumeMounts]]
+mountPath = "/app/uploads"
+volume = "gearup-uploads"

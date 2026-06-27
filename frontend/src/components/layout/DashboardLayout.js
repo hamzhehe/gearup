@@ -7,13 +7,14 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import GlobalChatbot from '../shared/GlobalChatbot';
 import Footer from '../shared/Footer';
+import SuspensionBanner from '../shared/SuspensionBanner';
 
 const SIDEBAR_FULL = 280;
 const SIDEBAR_COLLAPSED = 72;
 
 const DashboardLayout = ({ children }) => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isReadOnlyMode } = useAuth();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -67,7 +68,7 @@ const DashboardLayout = ({ children }) => {
         <Topbar
           onToggleSidebar={toggleSidebar}
           onAddProductClick={
-            user?.role === 'manufacturer'
+            user?.role === 'manufacturer' && !isReadOnlyMode
               ? () => router.push('/manufacturer/products/new')
               : undefined
           }
@@ -78,6 +79,7 @@ const DashboardLayout = ({ children }) => {
         <main className="flex-1 p-4 sm:p-5 lg:p-6 overflow-x-hidden min-w-0">
           <div className="w-full min-w-0 max-w-[1480px] mx-auto">
             <div className="seller-page-sheet min-h-[calc(100vh-8rem)] w-full">
+              <SuspensionBanner />
               {children}
             </div>
           </div>

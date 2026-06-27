@@ -1,19 +1,36 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getApiBaseUrl } from '@/lib/api';
 import PublicLayout from '../../components/shared/PublicLayout';
 import ProtectedRoute from '@/components/shared/ProtectedRoute';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PageShell from '@/components/dashboard/PageShell';
 import PageHeader from '@/components/dashboard/PageHeader';
-import SupportCard from '@/components/dashboard/SupportCard';
 import { useAuth } from '@/context/AuthContext';
 import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
+function getProfileContactFields(user) {
+    if (!user) {
+        return { name: '', email: '', company: '' };
+    }
+
+    return {
+        name: user.name || '',
+        email: user.email || '',
+        company: user.businessDetails?.businessName || '',
+    };
+}
+
 const Contact = () => {
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const isManufacturerDashboard = user?.role === 'manufacturer';
+    const profileContact = useMemo(() => getProfileContactFields(user), [user]);
+    const hasProfileCompany = !!profileContact.company.trim();
+    const useSessionIdentity = isAuthenticated && !!user;
+    const readOnlyFieldClass =
+        'bg-[#F1F5F9] text-[#475569] cursor-not-allowed border-transparent focus:border-transparent focus:ring-0';
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -25,6 +42,17 @@ const Contact = () => {
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    useEffect(() => {
+        if (!user) return;
+        const nextProfile = getProfileContactFields(user);
+        setFormData((prev) => ({
+            ...prev,
+            name: nextProfile.name,
+            email: nextProfile.email,
+            company: nextProfile.company || prev.company,
+        }));
+    }, [user]);
 
     const inquiryOptions = [
         { value: 'general', label: 'General Inquiry' },
@@ -59,26 +87,53 @@ const Contact = () => {
         setLoading(true);
         setStatus({ type: null, message: '' });
 
+        const submissionIdentity = useSessionIdentity
+            ? {
+                name: profileContact.name,
+                email: profileContact.email,
+                company: hasProfileCompany ? profileContact.company : formData.company,
+            }
+            : {
+                name: formData.name,
+                email: formData.email,
+                company: formData.company,
+            };
+
         // Strict validation rules
         let newErrors = {};
 
         // Name Validation
-        if (!formData.name.trim()) {
+        if (!submissionIdentity.name.trim()) {
             newErrors.name = 'Full Name is required.';
-        } else if (formData.name.trim().length < 2) {
+        } else if (submissionIdentity.name.trim().length < 2) {
             newErrors.name = 'Name must be at least 2 characters.';
-        } else if (!/^[A-Za-z\s\-]+$/.test(formData.name)) {
+        } else if (!/^[A-Za-z\s\-]+$/.test(submissionIdentity.name)) {
             newErrors.name = 'Name can only contain letters, spaces, and hyphens.';
-        } else if (isGibberish(formData.name)) {
+        } else if (isGibberish(submissionIdentity.name)) {
             newErrors.name = 'Please enter a valid real name.';
         }
 
         // Email Validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!formData.email.trim()) {
+        if (!submissionIdentity.email.trim()) {
             newErrors.email = 'Email Address is required.';
-        } else if (!emailRegex.test(formData.email)) {
+        } else if (!emailRegex.test(submissionIdentity.email)) {
             newErrors.email = 'Please enter a valid email address.';
+        }
+
+        // Company Name Validation
+        if (!submissionIdentity.company.trim()) {
+            newErrors.company = 'Company Name is required.';
+        } else if (submissionIdentity.company.trim().length < 2) {
+            newErrors.company = 'Company name must be at least 2 characters.';
+        } else if (submissionIdentity.company.trim().length > 80) {
+            newErrors.company = 'Company name cannot exceed 80 characters.';
+        } else if (!/^[A-Za-z0-9\s&.,'\-()]+$/.test(submissionIdentity.company.trim())) {
+            newErrors.company = 'Company name contains invalid characters.';
+        } else if (isGibberish(submissionIdentity.company)) {
+            newErrors.company = 'Please enter a valid company name.';
+        } else if (isSpam(submissionIdentity.company)) {
+            newErrors.company = 'Company name contains blocked content (URLs or spam keywords).';
         }
 
         // Message Validation
@@ -103,11 +158,23 @@ const Contact = () => {
 
         setErrors({});
 
+        const payload = {
+            name: submissionIdentity.name.trim(),
+            email: submissionIdentity.email.trim(),
+            company: submissionIdentity.company.trim(),
+            message: formData.message.trim(),
+            type: formData.type,
+        };
+
         try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
             const response = await fetch(`${getApiBaseUrl()}/api/contact`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(payload),
             });
 
             let data = null;
@@ -122,7 +189,11 @@ const Contact = () => {
                     type: 'success',
                     message: data.message || 'Thank you! Your message has been sent. We will respond soon.',
                 });
-                setFormData({ name: '', email: '', company: '', message: '', type: 'general' });
+                setFormData({
+                    ...getProfileContactFields(user),
+                    message: '',
+                    type: 'general',
+                });
             } else {
                 const errMsg = data?.error || 'We could not send your message. Please try again or email us directly.';
                 setStatus({ type: 'error', message: errMsg });
@@ -138,12 +209,21 @@ const Contact = () => {
     };
 
     const handleChange = (e) => {
+        const { name, value } = e.target;
+
+        if (useSessionIdentity && (name === 'name' || name === 'email')) {
+            return;
+        }
+        if (useSessionIdentity && name === 'company' && hasProfileCompany) {
+            return;
+        }
+
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: value
         });
-        if (errors[e.target.name]) {
-            setErrors({ ...errors, [e.target.name]: null });
+        if (errors[name]) {
+            setErrors({ ...errors, [name]: null });
         }
     };
 
@@ -223,7 +303,7 @@ const Contact = () => {
             </div>
 
             {/* Right — Contact Form Premium Card */}
-            <div className="bg-white/80 backdrop-blur-xl rounded-[24px] border border-white/40 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] p-8 md:p-10 relative">
+            <div id="gearup-contact-form" className="bg-white/80 backdrop-blur-xl rounded-[24px] border border-white/40 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] p-8 md:p-10 relative scroll-mt-28">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00A878] to-emerald-400 rounded-t-[24px]" />
 
                 {status.type === 'success' && (
@@ -296,15 +376,16 @@ const Contact = () => {
                                 name="name"
                                 value={formData.name}
                                 onChange={handleChange}
+                                readOnly={useSessionIdentity}
                                 required
-                                className={`w-full px-5 py-4 bg-[#F8FAFC] border-2 rounded-[16px] hover:bg-slate-100 focus:bg-white focus:ring-4 text-[#0F172A] font-semibold text-[15px] outline-none transition-all duration-300 placeholder:text-slate-400 placeholder:font-medium ${errors.name ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : 'border-transparent focus:border-[#00A878] focus:ring-[#00A878]/10'}`}
+                                className={`w-full px-5 py-4 bg-[#F8FAFC] border-2 rounded-[16px] hover:bg-slate-100 focus:bg-white focus:ring-4 text-[#0F172A] font-semibold text-[15px] outline-none transition-all duration-300 placeholder:text-slate-400 placeholder:font-medium ${errors.name ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : useSessionIdentity ? readOnlyFieldClass : 'border-transparent focus:border-[#00A878] focus:ring-[#00A878]/10'}`}
                                 placeholder="Your name"
                             />
                             {errors.name && <p className="text-rose-500 text-[12px] font-bold mt-2">{errors.name}</p>}
                         </div>
                         <div>
                             <label htmlFor="company" className="block text-[11px] font-bold uppercase tracking-widest text-[#64748B] mb-2">
-                                Company Name
+                                Company Name <span className="text-rose-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -312,9 +393,12 @@ const Contact = () => {
                                 name="company"
                                 value={formData.company}
                                 onChange={handleChange}
-                                className="w-full px-5 py-4 bg-[#F8FAFC] border-2 border-transparent rounded-[16px] hover:bg-slate-100 focus:bg-white focus:border-[#00A878] focus:ring-4 focus:ring-[#00A878]/10 text-[#0F172A] font-semibold text-[15px] outline-none transition-all duration-300 placeholder:text-slate-400 placeholder:font-medium"
+                                readOnly={useSessionIdentity && hasProfileCompany}
+                                required
+                                className={`w-full px-5 py-4 bg-[#F8FAFC] border-2 rounded-[16px] hover:bg-slate-100 focus:bg-white focus:ring-4 text-[#0F172A] font-semibold text-[15px] outline-none transition-all duration-300 placeholder:text-slate-400 placeholder:font-medium ${errors.company ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : useSessionIdentity && hasProfileCompany ? readOnlyFieldClass : 'border-transparent focus:border-[#00A878] focus:ring-[#00A878]/10'}`}
                                 placeholder="Your Company Name"
                             />
+                            {errors.company && <p className="text-rose-500 text-[12px] font-bold mt-2">{errors.company}</p>}
                         </div>
                     </div>
 
@@ -328,8 +412,9 @@ const Contact = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
+                            readOnly={useSessionIdentity}
                             required
-                            className={`w-full px-5 py-4 bg-[#F8FAFC] border-2 rounded-[16px] hover:bg-slate-100 focus:bg-white focus:ring-4 text-[#0F172A] font-semibold text-[15px] outline-none transition-all duration-300 placeholder:text-slate-400 placeholder:font-medium ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : 'border-transparent focus:border-[#00A878] focus:ring-[#00A878]/10'}`}
+                            className={`w-full px-5 py-4 bg-[#F8FAFC] border-2 rounded-[16px] hover:bg-slate-100 focus:bg-white focus:ring-4 text-[#0F172A] font-semibold text-[15px] outline-none transition-all duration-300 placeholder:text-slate-400 placeholder:font-medium ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : useSessionIdentity ? readOnlyFieldClass : 'border-transparent focus:border-[#00A878] focus:ring-[#00A878]/10'}`}
                             placeholder="name@company.com"
                         />
                         {errors.email && <p className="text-rose-500 text-[12px] font-bold mt-2">{errors.email}</p>}
@@ -391,10 +476,7 @@ const Contact = () => {
                             title="Help & Support"
                             subtitle="Contact our B2B merchant support team or send an inquiry"
                         />
-                        <div className="grid lg:grid-cols-3 gap-6 items-start">
-                            <div className="lg:col-span-2">{formSection}</div>
-                            <SupportCard />
-                        </div>
+                        {formSection}
                     </PageShell>
                 </DashboardLayout>
             </ProtectedRoute>

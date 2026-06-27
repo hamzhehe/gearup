@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 import { isLowStockAlert } from '@/utils/inventory';
 import { formatPKR, buildRefundRecordsFromDisputes, getNetSalesMetrics, getNetPurchaseMetrics, getUserFinancialMetrics } from '@/lib/financeUtils';
 import { subscribeFinancialSync } from '@/lib/financialSync';
@@ -67,6 +68,7 @@ const ManufacturerDashboard = () => {
     const [timeRange, setTimeRange] = useState('6months');
     const [filtering, setFiltering] = useState(false);
     const { user, updateUser } = useAuth();
+    const { isReadOnlyMode } = useReadOnlyMode();
     const router = useRouter();
 
     const [orders, setOrders] = useState([]);
@@ -869,7 +871,9 @@ const ManufacturerDashboard = () => {
                     <OrdersTable
                         orders={recentOrders}
                         loading={loading || filtering}
-                        onAddCatalogClick={() => router.push('/manufacturer/products/new')}
+                        onAddCatalogClick={
+                            isReadOnlyMode ? undefined : () => router.push('/manufacturer/products/new')
+                        }
                     />
                     <OrdersTable
                         orders={recentPurchases}

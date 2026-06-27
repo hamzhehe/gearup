@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { fetchRecommendedSponsored, mapSponsoredItem, trackAdEvent } from '@/lib/advertisingApi';
 import { formatPKR } from '@/lib/financeUtils';
-import { getApiBaseUrl } from '@/lib/api';
+import { resolveProductImageUrl } from '@/lib/marketplaceData';
 import { formatMoqDisplay } from '@/utils/moq';
 
 export default function SponsoredProductsWidget({ limit = 5 }) {
@@ -35,7 +35,7 @@ export default function SponsoredProductsWidget({ limit = 5 }) {
       </div>
       <div className="p-4 space-y-3">
         {items.map((item) => {
-          const img = item.image?.startsWith('http') ? item.image : item.image ? `${getApiBaseUrl()}${item.image}` : null;
+          const img = resolveProductImageUrl(item.image);
           return (
             <Link
               key={item.adId || item.id}

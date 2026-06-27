@@ -28,3 +28,9 @@ backend/uploads/*
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# Local backups (large archives)
+backups/
+
+_git_push_helper/
+

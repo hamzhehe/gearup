@@ -11,6 +11,7 @@ import {
 } from '@/lib/pakistanLocations';
 import { User, Building, Mail, Phone, MapPin, Camera, ShieldCheck, FileText, CheckCircle, AlertCircle, Building2, Trash2, Pencil, Save, X, Lock, Eye, EyeOff, KeyRound, Clock } from 'lucide-react';
 import VerificationStatusBanner from '@/components/shared/VerificationStatusBanner';
+import useReadOnlyMode from '@/hooks/useReadOnlyMode';
 import { getVerificationDisplayState } from '@/lib/verificationStats';
 import UserAvatar from '@/components/ui/UserAvatar';
 
@@ -43,6 +44,7 @@ function buildProfileFormState(user) {
 
 const UserProfile = ({ isDashboard = false }) => {
     const { user, updateUser } = useAuth();
+    const { isReadOnlyMode, guardAction } = useReadOnlyMode();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState(() => buildProfileFormState(null));
     const [selectedFile, setSelectedFile] = useState(null);
@@ -221,6 +223,7 @@ const UserProfile = ({ isDashboard = false }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!guardAction()) return;
         setValidationError(null);
         setSuccessMessage(null);
 
@@ -578,6 +581,7 @@ const UserProfile = ({ isDashboard = false }) => {
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
+        if (!guardAction()) return;
         setPwError(null);
         setPwSuccess(null);
 
@@ -649,7 +653,7 @@ const UserProfile = ({ isDashboard = false }) => {
                         </p>
                     </div>
 
-                    {!isEditing ? (
+                    {!isEditing && !isReadOnlyMode ? (
                         <button
                             type="button"
                             onClick={() => setIsEditing(true)}
@@ -657,7 +661,7 @@ const UserProfile = ({ isDashboard = false }) => {
                         >
                             <Pencil size={13} strokeWidth={2.5} /> Edit Profile
                         </button>
-                    ) : (
+                    ) : !isEditing && isReadOnlyMode ? null : (
                         <div className="shrink-0 flex gap-2 select-none">
                             <button
                                 type="button"

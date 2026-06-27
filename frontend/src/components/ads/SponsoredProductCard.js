@@ -13,8 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatPKR } from '@/lib/financeUtils';
-import { getApiBaseUrl } from '@/lib/api';
-import { PRODUCT_PLACEHOLDER } from '@/lib/marketplaceData';
+import { PRODUCT_PLACEHOLDER, resolveProductImageUrl } from '@/lib/marketplaceData';
 import { formatMoqDisplay } from '@/utils/moq';
 
 export default function SponsoredProductCard({
@@ -25,11 +24,7 @@ export default function SponsoredProductCard({
   compact = false,
   isPremium = false,
 }) {
-  const imageUrl = product.image?.startsWith('http')
-    ? product.image
-    : product.image
-      ? `${getApiBaseUrl()}${product.image}`
-      : PRODUCT_PLACEHOLDER;
+  const imageUrl = resolveProductImageUrl(product.image);
 
   const moqLabel = formatMoqDisplay(product.moq, product.bulkUnit, product.packSize);
 
@@ -41,9 +36,7 @@ export default function SponsoredProductCard({
   const memberSince = product.memberSince || product.joinedDate || null;
 
   const mediaUrl = product.customMedia
-    ? product.customMedia.startsWith('http')
-      ? product.customMedia
-      : `${getApiBaseUrl()}${product.customMedia}`
+    ? resolveProductImageUrl(product.customMedia)
     : imageUrl;
 
   const isVideo = mediaUrl && (mediaUrl.endsWith('.mp4') || mediaUrl.endsWith('.webm'));

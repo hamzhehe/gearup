@@ -266,12 +266,6 @@ exports.login = async (req, res, next) => {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        if (user.isBlocked) {
-            console.log(`[AUTH] User blocked: ${email}`);
-            const reasonText = user.blockReason ? ` Reason: ${user.blockReason}` : '';
-            return res.status(401).json({ success: false, error: `Your account has been suspended.${reasonText} Please contact support@gearup.com or visit the Contact page for assistance.` });
-        }
-
         // Check if password matches
         const isMatch = await user.matchPassword(password);
         console.log(`[AUTH] Password match result: ${isMatch}`);
@@ -486,7 +480,7 @@ exports.getCurrentUser = async (req, res, next) => {
 
         console.log("Fetched user profile:", user);
 
-        res.status(200).json({ success: true, data: user });
+        res.status(200).json({ success: true, data: serializeUserForClient(user) });
     } catch (error) {
         res.status(400).json({ success: false, error: error.message });
     }
@@ -723,10 +717,6 @@ exports.googleAuth = async (req, res, next) => {
                 user.googleId = googleId;
                 await user.save();
             }
-            if (user.isBlocked) {
-                const reasonText = user.blockReason ? ` Reason: ${user.blockReason}` : '';
-                return res.status(401).json({ success: false, error: `Your account has been suspended.${reasonText} Please contact support@gearup.com or visit the Contact page for assistance.` });
-            }
             sendTokenResponse(user, 200, res);
         } else {
             // New user registration via Google
@@ -831,7 +821,9 @@ const sendTokenResponse = async (user, statusCode, res) => {
                 businessDetails: serialized.businessDetails || {},
                 paymentDetails: serialized.paymentDetails || {},
                 acceptedPolicies: serialized.acceptedPolicies,
-                acceptedPoliciesAt: serialized.acceptedPoliciesAt
+                acceptedPoliciesAt: serialized.acceptedPoliciesAt,
+                isBlocked: !!serialized.isBlocked,
+                blockReason: serialized.blockReason || ''
             }
         });
 };
