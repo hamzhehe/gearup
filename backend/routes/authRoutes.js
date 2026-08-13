@@ -1,0 +1,42 @@
+const express = require('express');
+const { register, login, googleAuth, completeGoogleRegistration, getUser, getManufacturers, logout, submitVerification, getVerificationDocument, updateCapacity, forgotPassword, resetPassword, changePassword, updateProfile, getCurrentUser, verifyEmail, resendOTP, acceptPolicies, getPayoutSettings, updatePayoutSettings } = require('../controllers/authController');
+const { getSettings } = require('../controllers/adminController');
+const { protect, optionalAuth } = require('../middleware/authMiddleware');
+
+const router = express.Router();
+
+router.use((req, res, next) => {
+    console.log(`[AUTH] ${req.method} ${req.url}`);
+    next();
+});
+
+const path = require('path');
+const multer = require('multer');
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+router.post('/register', upload.single('businessLicense'), register);
+router.put('/verify-business', protect, upload.single('businessLicense'), submitVerification);
+router.get('/verification-document', protect, getVerificationDocument);
+router.put('/capacity', protect, updateCapacity);
+router.post('/login', login);
+router.post('/google', googleAuth);
+router.post('/google/complete-registration', completeGoogleRegistration);
+router.post('/verify-email', verifyEmail);
+router.post('/resend-otp', resendOTP);
+router.get('/logout', logout);
+router.get('/me', protect, getCurrentUser);
+router.get('/user/:id', getUser);
+router.post('/forgotpassword', forgotPassword);
+router.put('/resetpassword/:resettoken', resetPassword);
+router.put('/profile', protect, upload.single('avatar'), updateProfile);
+router.put('/change-password', protect, changePassword);
+router.put('/accept-policies', protect, acceptPolicies);
+router.get('/settings', protect, getSettings);
+router.get('/manufacturers', optionalAuth, getManufacturers);
+
+router.get('/payout-settings', protect, getPayoutSettings);
+router.put('/payout-settings', protect, updatePayoutSettings);
+
+module.exports = router;

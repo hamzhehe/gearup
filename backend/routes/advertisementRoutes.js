@@ -1,0 +1,93 @@
+const express = require('express');
+const router = express.Router();
+const {
+  getPlans,
+  updatePlan,
+  getMyCampaigns,
+  getBillingHistory,
+  createCampaign,
+  updateCampaign,
+  createCheckoutSession,
+  pauseCampaign,
+  resumeCampaign,
+  cancelCampaign,
+  duplicateCampaign,
+  getCampaignAnalytics,
+  getSponsoredProducts,
+  getRecommendedSponsored,
+  trackImpression,
+  trackClick,
+  trackView,
+  trackInquiry,
+  trackQuote,
+  getAdminOverview,
+  getAdminCampaigns,
+  getAdminRevenueAnalytics,
+  getAdminAdTransactions,
+  approveCampaign,
+  rejectCampaign,
+  expireCampaign,
+  extendCampaign,
+  deleteCampaign,
+  getCampaignById
+} = require('../controllers/advertisementController');
+const {
+  getPricingCenter,
+  getAdminPlans,
+  updatePlanPrice,
+  getDiscounts,
+  createDiscount,
+  updateDiscount,
+  toggleDiscount,
+  getPricingHistory,
+  getPlansWithPricing,
+  getSinglePlanPricing
+} = require('../controllers/adPricingController');
+const { protect, authorize, optionalAuth } = require('../middleware/authMiddleware');
+
+router.get('/plans', getPlansWithPricing);
+router.get('/plans/:slug/pricing', optionalAuth, getSinglePlanPricing);
+
+router.get('/sponsored', optionalAuth, getSponsoredProducts);
+router.get('/recommended', optionalAuth, getRecommendedSponsored);
+
+router.post('/:id/track/impression', optionalAuth, trackImpression);
+router.post('/:id/track/click', optionalAuth, trackClick);
+router.post('/:id/track/view', optionalAuth, trackView);
+router.post('/:id/track/inquiry', protect, trackInquiry);
+router.post('/:id/track/quote', protect, trackQuote);
+
+router.use(protect);
+
+router.get('/mine', authorize('manufacturer', 'wholesaler'), getMyCampaigns);
+router.get('/billing/history', authorize('manufacturer', 'wholesaler'), getBillingHistory);
+router.post('/', authorize('manufacturer', 'wholesaler'), createCampaign);
+router.get('/:id', authorize('admin', 'manufacturer', 'wholesaler'), getCampaignById);
+router.put('/:id', authorize('manufacturer', 'wholesaler'), updateCampaign);
+router.post('/:id/checkout', authorize('manufacturer', 'wholesaler'), createCheckoutSession);
+router.post('/:id/pause', authorize('manufacturer', 'wholesaler', 'admin'), pauseCampaign);
+router.post('/:id/resume', authorize('manufacturer', 'wholesaler', 'admin'), resumeCampaign);
+router.post('/:id/cancel', authorize('manufacturer', 'wholesaler'), cancelCampaign);
+router.delete('/:id', authorize('manufacturer', 'wholesaler', 'admin'), deleteCampaign);
+router.post('/:id/duplicate', authorize('manufacturer', 'wholesaler'), duplicateCampaign);
+router.get('/:id/analytics', authorize('manufacturer', 'wholesaler', 'admin'), getCampaignAnalytics);
+
+router.get('/admin/overview', authorize('admin'), getAdminOverview);
+router.get('/admin/campaigns', authorize('admin'), getAdminCampaigns);
+router.get('/admin/revenue/analytics', authorize('admin'), getAdminRevenueAnalytics);
+router.get('/admin/revenue/transactions', authorize('admin'), getAdminAdTransactions);
+router.get('/admin/pricing/center', authorize('admin'), getPricingCenter);
+router.get('/admin/pricing/plans', authorize('admin'), getAdminPlans);
+router.put('/admin/pricing/plans/:slug', authorize('admin'), updatePlanPrice);
+router.get('/admin/pricing/discounts', authorize('admin'), getDiscounts);
+router.post('/admin/pricing/discounts', authorize('admin'), createDiscount);
+router.put('/admin/pricing/discounts/:id', authorize('admin'), updateDiscount);
+router.post('/admin/pricing/discounts/:id/toggle', authorize('admin'), toggleDiscount);
+router.get('/admin/pricing/history', authorize('admin'), getPricingHistory);
+router.put('/admin/plans/:slug', authorize('admin'), updatePlanPrice);
+router.post('/:id/approve', authorize('admin'), approveCampaign);
+router.post('/:id/reject', authorize('admin'), rejectCampaign);
+router.post('/:id/expire', authorize('admin'), expireCampaign);
+router.post('/:id/extend', authorize('admin'), extendCampaign);
+
+module.exports = router;

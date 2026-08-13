@@ -1,0 +1,143 @@
+const { cloudinary, verifyCloudinaryConfig } = require('../config/cloudinary');
+
+/**
+ * Uploads a file buffer to Cloudinary
+ * @param {Buffer} fileBuffer - The file buffer from multer memoryStorage
+ * @param {string} folder - Target folder in Cloudinary
+ * @returns {Promise<object>} Cloudinary upload response object
+ */
+const uploadToCloudinary = async (fileBuffer, folder = 'gearup') => {
+  if (!Buffer.isBuffer(fileBuffer) && typeof fileBuffer !== 'string') {
+    throw new Error('Cloudinary upload requires a file buffer or string content.');
+  }
+
+  const isConfigured = await verifyCloudinaryConfig({ log: false });
+  if (!isConfigured) {
+    throw new Error('Cloudinary is not configured. Please set the required environment variables.');
+  }
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: 'auto',
+        use_filename: true,
+        unique_filename: true,
+      },
+      (error, result) => {
+        if (error) {
+          const message = error.message || 'Cloudinary upload failed.';
+          console.error('[CLOUDINARY] Upload stream error:', message);
+          return reject(new Error(message));
+        }
+        if (!result?.secure_url || !result?.public_id) {
+          console.error('[CLOUDINARY] Upload completed without a URL or public_id.', result);
+          return reject(new Error('Cloudinary upload completed without a usable response.'));
+        }
+        resolve(result);
+      }
+    );
+    stream.end(fileBuffer);
+  });
+};
+
+/**
+ * Extracts the public ID from a Cloudinary URL
+ * @param {string} url - Cloudinary URL
+ * @returns {string|null} The public ID or null
+ */
+const getPublicIdFromUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  if (!url.includes('res.cloudinary.com')) return null;
+
+  const parts = url.split('/upload/');
+  if (parts.length < 2) return null;
+
+  const afterUpload = parts[1];
+  const pathParts = afterUpload.split('/');
+  
+  // Remove version prefix if exists (e.g. 'v12345678/')
+  if (pathParts[0].startsWith('v') && !isNaN(pathParts[0].substring(1))) {
+    pathParts.shift();
+  }
+
+  const pathWithoutVersion = pathParts.join('/');
+  const lastDotIndex = pathWithoutVersion.lastIndexOf('.');
+  if (lastDotIndex !== -1) {
+    return pathWithoutVersion.substring(0, lastDotIndex);
+  }
+  return pathWithoutVersion;
+};
+
+/**
+ * Extracts the resource type from a Cloudinary URL
+ * @param {string} url - Cloudinary URL
+ * @returns {string} 'image', 'video', or 'raw'
+ */
+const getResourceTypeFromUrl = (url) => {
+  if (!url || typeof url !== 'string') return 'image';
+  if (url.includes('/video/upload/')) return 'video';
+  if (url.includes('/raw/upload/')) return 'raw';
+  return 'image';
+};
+
+/**
+ * Deletes a file from Cloudinary given its URL
+ * @param {string} url - The full Cloudinary URL
+ * @returns {Promise<object|null>} Cloudinary destruction result or null
+ */
+const deleteFromUrl = async (url) => {
+  try {
+    const publicId = getPublicIdFromUrl(url);
+    if (!publicId) {
+      console.log('[CLOUDINARY] Non-Cloudinary or invalid URL, skipping deletion:', url);
+      return null;
+    }
+    const resourceType = getResourceTypeFromUrl(url);
+    console.log(`[CLOUDINARY] Deleting resource: ${publicId} (${resourceType})`);
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    return result;
+  } catch (error) {
+    console.error('[CLOUDINARY] Failed to delete from Cloudinary:', error.message);
+    return null;
+  }
+};
+
+/**
+ * Generates an authenticated download URL for Cloudinary assets (especially PDFs)
+ * to avoid 401 Unauthorized errors on Cloudinary delivery.
+ * @param {string} url - Full Cloudinary URL or local path
+ * @returns {string} Signed authenticated URL or original URL
+ */
+const getSecureDocumentUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('res.cloudinary.com')) return url;
+
+  try {
+    const publicId = getPublicIdFromUrl(url);
+    if (!publicId) return url;
+
+    const resourceType = getResourceTypeFromUrl(url);
+    const cleanUrl = url.split('?')[0];
+    const ext = cleanUrl.includes('.') ? cleanUrl.split('.').pop() : 'pdf';
+
+    const authUrl = cloudinary.utils.private_download_url(publicId, ext, {
+      resource_type: resourceType,
+      type: 'upload'
+    });
+
+    return authUrl || url;
+  } catch (err) {
+    console.error('[CLOUDINARY] Failed to generate secure document URL:', err.message);
+    return url;
+  }
+};
+
+module.exports = {
+  cloudinary,
+  uploadToCloudinary,
+  getPublicIdFromUrl,
+  getResourceTypeFromUrl,
+  getSecureDocumentUrl,
+  deleteFromUrl
+};
