@@ -1,5 +1,5 @@
 const dialogflow = require('@google-cloud/dialogflow');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 // Send message to Dialogflow
 // POST /api/ai/chat
@@ -13,7 +13,7 @@ exports.chatWithAI = async (req, res, next) => {
         }
 
         const projectId = process.env.DIALOGFLOW_PROJECT_ID;
-        const sessionId = uuidv4();
+        const sessionId = crypto.randomUUID();
 
         // Robust Private Key Parsing
         const privateKey = process.env.DIALOGFLOW_PRIVATE_KEY

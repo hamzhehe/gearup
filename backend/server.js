@@ -34,68 +34,85 @@ const { prepareGoogleCredentials } = require('./utils/prepareGoogleCredentials')
 const { verifyCloudinaryConfig } = require('./config/cloudinary');
 prepareGoogleCredentials();
 
-// Connect to database and start server
+const app = express();
+
+// Vercel Serverless Middleware
+// Vercel handles requests amorphously, so we must ensure DB is connected on each handler hit
+app.use(async (req, res, next) => {
+    if (process.env.VERCEL) {
+        try {
+            await connectDB();
+            await verifyCloudinaryConfig({ log: false, throwOnFailure: false });
+            prepareGoogleCredentials();
+        } catch (err) {
+            console.error('Vercel init error:', err);
+        }
+    }
+    next();
+});
+
+// Enable CORS
+app.use(cors());
+
+// Mount Stripe router before global json body parsing to preserve raw webhook bodies
+const stripeRoutes = require('./routes/stripeRoutes');
+app.use('/api/stripe', stripeRoutes);
+
+// Body parser — allow product payloads with metadata (images upload separately)
+app.use(express.json({ limit: '2mb' }));
+
+// Set static folder with proof protection
+app.use('/uploads', (req, res, next) => {
+    // Vercel does not support persistent local filesystem uploads in /uploads
+    if (process.env.VERCEL) {
+        return res.status(404).json({ success: false, error: 'Local uploads not available in Vercel' });
+    }
+    if (req.url.includes('proof-') || req.url.includes('.pdf')) {
+        return res.status(403).json({ success: false, error: 'Direct access to proofs is forbidden. Use the secure route.' });
+    }
+    next();
+}, express.static(path.join(__dirname, 'uploads')));
+
+// Mount routers
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/chats', chatRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/banners', require('./routes/bannerRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/transactions', transactionRoutes);
+
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/payouts', require('./routes/payoutRoutes'));
+app.use('/api/ads', require('./routes/ads'));
+app.use('/api/advertisements', require('./routes/advertisementRoutes'));
+
+// Health check route (Railway + uptime monitors)
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        success: true,
+        message: 'API is running',
+    });
+});
+
+// Start the server natively if run directly (local development)
 const startServer = async () => {
     try {
         await connectDB();
         await verifyCloudinaryConfig({ log: true, throwOnFailure: false });
 
-        const app = express();
-        
-        // Enable CORS
-        app.use(cors());
-        
-        // Mount Stripe router before global json body parsing to preserve raw webhook bodies
-        const stripeRoutes = require('./routes/stripeRoutes');
-        app.use('/api/stripe', stripeRoutes);
-        
-        const path = require('path');
-        
-        // Body parser — allow product payloads with metadata (images upload separately)
-        app.use(express.json({ limit: '2mb' }));
-        
-        // Set static folder with proof protection
-        app.use('/uploads', (req, res, next) => {
-            if (req.url.includes('proof-') || req.url.includes('.pdf')) {
-                return res.status(403).json({ success: false, error: 'Direct access to proofs is forbidden. Use the secure route.' });
-            }
-            next();
-        }, express.static(path.join(__dirname, 'uploads')));
-        
-        // Mount routers
-        app.use('/api/auth', authRoutes);
-        app.use('/api/admin', adminRoutes);
-        app.use('/api/products', productRoutes);
-        app.use('/api/orders', orderRoutes);
-        app.use('/api/ai', aiRoutes);
-        app.use('/api/contact', contactRoutes);
-        app.use('/api/chats', chatRoutes);
-        app.use('/api/audit-logs', auditLogRoutes);
-        app.use('/api/notifications', notificationRoutes);
-        app.use('/api/banners', require('./routes/bannerRoutes'));
-        app.use('/api/upload', require('./routes/uploadRoutes'));
-        app.use('/api/transactions', transactionRoutes);
-
-        app.use('/api/disputes', disputeRoutes);
-        app.use('/api/payouts', require('./routes/payoutRoutes'));
-        app.use('/api/ads', require('./routes/ads'));
-        app.use('/api/advertisements', require('./routes/advertisementRoutes'));
-
         const { scheduleAdCampaignExpiryJob } = require('./jobs/adCampaignExpiryJob');
         scheduleAdCampaignExpiryJob();
-        
+
         const { scheduleEscrowAutoReleaseJob } = require('./jobs/escrowAutoReleaseJob');
         scheduleEscrowAutoReleaseJob();
-        
-        // Health check route (Railway + uptime monitors)
-        app.get('/api/health', (req, res) => {
-            res.status(200).json({
-                status: 'ok',
-                success: true,
-                message: 'API is running',
-            });
-        });
-        
+
         const PORT = process.env.PORT || 5001;
 
         app.listen(PORT, () => {
@@ -114,5 +131,9 @@ const startServer = async () => {
     }
 };
 
-startServer();
+// Check if file is being run directly
+if (require.main === module) {
+    startServer();
+}
 
+module.exports = app;
