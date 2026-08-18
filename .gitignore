@@ -27,3 +27,9 @@ out/
 
 .DS_Store
 Thumbs.db
+
+# Cloudflare Wrangler
+.wrangler/
+
+# FreeBuff desktop cache
+.freebuff/
