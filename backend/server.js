@@ -92,6 +92,13 @@ app.use('/api/payouts', require('./routes/payoutRoutes'));
 app.use('/api/ads', require('./routes/ads'));
 app.use('/api/advertisements', require('./routes/advertisementRoutes'));
 
+app.get('/', (req, res) => {
+    res.status(200).json({
+        message: 'Welcome to the GearUp API',
+        documentation: '/api/health'
+    });
+});
+
 // Health check route (Railway + uptime monitors)
 app.get('/api/health', (req, res) => {
     res.status(200).json({
