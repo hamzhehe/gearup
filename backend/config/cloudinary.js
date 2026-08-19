@@ -1,7 +1,8 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-const envPath = path.resolve(__dirname, '..', '.env');
+const dirName = typeof __dirname !== 'undefined' ? __dirname : (process.cwd() || '/');
+const envPath = path.resolve(dirName, '..', '.env');
 dotenv.config({ path: envPath, override: true });
 
 const cloudinary = require('cloudinary').v2;
@@ -51,6 +52,10 @@ let lastVerification = null;
 
 const verifyCloudinaryConfig = async (options = {}) => {
     const { log = true, throwOnFailure = false } = options;
+
+    if (lastVerification && lastVerification.ok) {
+        return true;
+    }
 
     if (!isConfigured) {
         const message = 'Cloudinary is not fully configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.';

@@ -1,18 +1,27 @@
 const fs = require('fs');
 const path = require('path');
+const _dirName = typeof __dirname !== 'undefined' ? __dirname : (process.cwd() || '/');
 
 /**
  * Railway/cloud: paste service account JSON into GOOGLE_CREDENTIALS_JSON.
  * Local dev: use GOOGLE_APPLICATION_CREDENTIALS pointing at a file.
  */
+let isPrepared = false;
+
 function prepareGoogleCredentials() {
-  if (process.env.VERCEL) {
-    // Vercel Serverless Functions have a read-only filesystem (except /tmp)
-    // We expect Dialogflow to rely on environment variables directly instead of the file
+  if (isPrepared) {
+    return;
+  }
+
+  if (process.env.VERCEL || process.env.CLOUDFLARE || typeof __dirname === 'undefined') {
+    // Serverless environments with read-only filesystems
+    // Rely on environment variables directly instead of the file
+    isPrepared = true;
     return;
   }
 
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    isPrepared = true;
     return;
   }
 
@@ -21,7 +30,7 @@ function prepareGoogleCredentials() {
     return;
   }
 
-  const configDir = path.join(__dirname, '..', 'config');
+  const configDir = path.join(_dirName, '..', 'config');
   const credPath = path.join(configDir, 'google-credentials.json');
   try {
     fs.mkdirSync(configDir, { recursive: true });
@@ -29,6 +38,8 @@ function prepareGoogleCredentials() {
     process.env.GOOGLE_APPLICATION_CREDENTIALS = credPath;
   } catch (err) {
     console.error('Failed to write Google credentials:', err.message);
+  } finally {
+    isPrepared = true;
   }
 }
 
