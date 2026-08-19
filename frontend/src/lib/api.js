@@ -1,7 +1,7 @@
-const rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+let rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-if (!rawBackendUrl) {
-  throw new Error('NEXT_PUBLIC_BACKEND_URL is missing');
+if (!rawBackendUrl || rawBackendUrl.includes('5000') || rawBackendUrl.includes('localhost') || rawBackendUrl.includes('127.0.0.1')) {
+  rawBackendUrl = 'https://gearup-backend.hamzaasifghouri786.workers.dev';
 }
 
 /** @type {string} Base URL for the GearUp API (no trailing slash). */
