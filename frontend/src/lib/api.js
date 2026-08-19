@@ -1,26 +1,9 @@
-let rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+/** @type {string} Base URL for the GearUp API (no trailing slash). 
+ * Empty string allows Next.js rewrite rules in next.config.mjs to handle backend requests.
+ */
+export const API_BASE_URL = '';
 
-if (
-  !rawBackendUrl ||
-  rawBackendUrl === 'undefined' ||
-  rawBackendUrl === 'null' ||
-  !/^https?:\/\//i.test(rawBackendUrl) ||
-  rawBackendUrl.includes('5000') ||
-  rawBackendUrl.includes('localhost') ||
-  rawBackendUrl.includes('127.0.0.1') ||
-  rawBackendUrl.includes('railway')
-) {
-  rawBackendUrl = 'https://gearup-backend.hamzaasifghouri786.workers.dev';
-}
-
-/** @type {string} Base URL for the GearUp API (no trailing slash). */
-export const API_BASE_URL = String(rawBackendUrl).replace(/\/$/, '');
-
-const isLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/.*)?$/i.test(API_BASE_URL);
-
-if (!isLocalBackend && !API_BASE_URL.startsWith('https://')) {
-  throw new Error('NEXT_PUBLIC_BACKEND_URL must use HTTPS in production');
-}
+const isLocalBackend = false;
 
 /**
  * Base URL for the GearUp API (no trailing slash).
