@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt-edge');
 const crypto = require('crypto');
 const { findCityMatch, normalizeProvince, RECOGNIZED_PROVINCES } = require('../utils/pakistanLocations');
 const UserSchema = new mongoose.Schema({
