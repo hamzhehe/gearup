@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt-edge');
 const crypto = require('crypto');
 const { findCityMatch, normalizeProvince, RECOGNIZED_PROVINCES } = require('../utils/pakistanLocations');
 const UserSchema = new mongoose.Schema({
@@ -274,12 +273,14 @@ UserSchema.pre('save', async function () {
         return;
     }
 
+    const { default: bcrypt } = await import('bcrypt-edge');
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function (enteredPassword) {
+    const { default: bcrypt } = await import('bcrypt-edge');
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
