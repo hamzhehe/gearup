@@ -1,6 +1,14 @@
 let rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-if (!rawBackendUrl || rawBackendUrl.includes('5000') || rawBackendUrl.includes('localhost') || rawBackendUrl.includes('127.0.0.1')) {
+if (
+  !rawBackendUrl ||
+  rawBackendUrl === 'undefined' ||
+  rawBackendUrl === 'null' ||
+  !/^https?:\/\//i.test(rawBackendUrl) ||
+  rawBackendUrl.includes('5000') ||
+  rawBackendUrl.includes('localhost') ||
+  rawBackendUrl.includes('127.0.0.1')
+) {
   rawBackendUrl = 'https://gearup-backend.hamzaasifghouri786.workers.dev';
 }
 
