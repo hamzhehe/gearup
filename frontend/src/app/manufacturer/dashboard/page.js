@@ -80,7 +80,8 @@ const ManufacturerDashboard = () => {
 
     const fetchDashboardData = useCallback(async (silent = false) => {
         try {
-            if (!silent) setLoading(true);
+            const hasCache = localStorage.getItem('cached_market_products') && localStorage.getItem('cached_manufacturer_orders');
+            if (!silent && !hasCache) setLoading(true);
             const token = localStorage.getItem('token');
             const headers = { 'Authorization': `Bearer ${token}` };
 
@@ -94,20 +95,32 @@ const ManufacturerDashboard = () => {
 
             const globalRes = await fetch(`${getApiBaseUrl()}/api/products`);
             const globalData = await globalRes.json();
-            if (globalData.success) setMarketProducts(globalData.data);
+            if (globalData.success) {
+                setMarketProducts(globalData.data);
+                localStorage.setItem('cached_market_products', JSON.stringify(globalData.data));
+            }
 
             const ordersRes = await fetch(`${getApiBaseUrl()}/api/orders`, { headers });
             const ordersData = await ordersRes.json();
-            if (ordersData.success) setOrders(ordersData.data);
+            if (ordersData.success) {
+                setOrders(ordersData.data);
+                localStorage.setItem('cached_manufacturer_orders', JSON.stringify(ordersData.data));
+            }
 
             if (inventoryProductsUrl) {
                 const productsRes = await fetch(inventoryProductsUrl, { headers });
                 const productsData = await productsRes.json();
-                if (productsData.success) setProducts(productsData.data);
+                if (productsData.success) {
+                    setProducts(productsData.data);
+                    localStorage.setItem('cached_inventory_products', JSON.stringify(productsData.data));
+                }
             } else if (publicCatalogUrl) {
                 const productsRes = await fetch(publicCatalogUrl, { headers });
                 const productsData = await productsRes.json();
-                if (productsData.success) setProducts(productsData.data);
+                if (productsData.success) {
+                    setProducts(productsData.data);
+                    localStorage.setItem('cached_inventory_products', JSON.stringify(productsData.data));
+                }
             } else {
                 setProducts([]);
             }
@@ -127,17 +140,41 @@ const ManufacturerDashboard = () => {
             const uniqueDisputes = Array.from(
                 new Map(allDisputes.map((d) => [String(d._id || d.id), d])).values()
             );
-            setRefundRecords(buildRefundRecordsFromDisputes(uniqueDisputes));
-            setOpenIssueCount(countOpen(uniqueDisputes));
+            const buildRefunds = buildRefundRecordsFromDisputes(uniqueDisputes);
+            setRefundRecords(buildRefunds);
+            localStorage.setItem('cached_refund_records', JSON.stringify(buildRefunds));
+            
+            const issuesNum = countOpen(uniqueDisputes);
+            setOpenIssueCount(issuesNum);
+            localStorage.setItem('cached_open_issue_count', String(issuesNum));
         } catch (err) {
             console.error('Failed to fetch dashboard data:', err);
         } finally {
-            if (!silent) setLoading(false);
+            setLoading(false);
         }
     }, [user?.id, user?._id, user?.role]);
 
     useEffect(() => {
-        fetchDashboardData();
+        // SWR: Load from cache immediately for instant render
+        const cachedMarket = localStorage.getItem('cached_market_products');
+        const cachedOrders = localStorage.getItem('cached_manufacturer_orders');
+        const cachedInventory = localStorage.getItem('cached_inventory_products');
+        const cachedRefunds = localStorage.getItem('cached_refund_records');
+        const cachedIssues = localStorage.getItem('cached_open_issue_count');
+
+        if (cachedMarket || cachedOrders || cachedInventory) {
+            try {
+                if (cachedMarket) setMarketProducts(JSON.parse(cachedMarket));
+                if (cachedOrders) setOrders(JSON.parse(cachedOrders));
+                if (cachedInventory) setProducts(JSON.parse(cachedInventory));
+                if (cachedRefunds) setRefundRecords(JSON.parse(cachedRefunds));
+                if (cachedIssues) setOpenIssueCount(Number(cachedIssues));
+                setLoading(false);
+            } catch (e) {
+                console.warn('Failed to parse cached dashboard data:', e);
+            }
+        }
+        fetchDashboardData(true); // Trigger background sync
     }, [fetchDashboardData]);
 
     useEffect(() => {
