@@ -41,11 +41,14 @@ const app = express();
 // Serverless & Request Init Middleware
 // Ensures DB is connected on each handler hit for serverless runtimes
 app.use(async (req, res, next) => {
-    try {
-        await connectDB();
-        prepareGoogleCredentials();
-    } catch (err) {
-        console.error('Serverless init error:', err);
+    if (process.env.VERCEL || process.env.CLOUDFLARE || typeof __dirname === 'undefined') {
+        try {
+            await connectDB();
+            await verifyCloudinaryConfig({ log: false, throwOnFailure: false });
+            prepareGoogleCredentials();
+        } catch (err) {
+            console.error('Serverless init error:', err);
+        }
     }
     next();
 });
