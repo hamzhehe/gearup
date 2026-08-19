@@ -1,7 +1,9 @@
 const path = require('path');
 const dotenv = require('dotenv');
+// Shim __dirname for environments where it is not defined (like Cloudflare Workers ESM)
+const dirName = typeof __dirname !== 'undefined' ? __dirname : (process.cwd() || '/');
 // Load env vars immediately before importing any other modules/routes
-dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
+dotenv.config({ path: path.resolve(dirName, '.env'), override: true });
 
 const express = require('express');
 const cors = require('cors');
@@ -36,17 +38,14 @@ prepareGoogleCredentials();
 
 const app = express();
 
-// Vercel Serverless Middleware
-// Vercel handles requests amorphously, so we must ensure DB is connected on each handler hit
+// Serverless & Request Init Middleware
+// Ensures DB is connected on each handler hit for serverless runtimes
 app.use(async (req, res, next) => {
-    if (process.env.VERCEL) {
-        try {
-            await connectDB();
-            await verifyCloudinaryConfig({ log: false, throwOnFailure: false });
-            prepareGoogleCredentials();
-        } catch (err) {
-            console.error('Vercel init error:', err);
-        }
+    try {
+        await connectDB();
+        prepareGoogleCredentials();
+    } catch (err) {
+        console.error('Serverless init error:', err);
     }
     next();
 });
@@ -63,15 +62,15 @@ app.use(express.json({ limit: '2mb' }));
 
 // Set static folder with proof protection
 app.use('/uploads', (req, res, next) => {
-    // Vercel does not support persistent local filesystem uploads in /uploads
-    if (process.env.VERCEL) {
-        return res.status(404).json({ success: false, error: 'Local uploads not available in Vercel' });
+    // Vercel / Cloudflare does not support persistent local filesystem uploads in /uploads
+    if (process.env.VERCEL || process.env.CLOUDFLARE || typeof __dirname === 'undefined') {
+        return res.status(404).json({ success: false, error: 'Local uploads not available in this environment' });
     }
     if (req.url.includes('proof-') || req.url.includes('.pdf')) {
         return res.status(403).json({ success: false, error: 'Direct access to proofs is forbidden. Use the secure route.' });
     }
     next();
-}, express.static(path.join(__dirname, 'uploads')));
+}, express.static(path.join(dirName, 'uploads')));
 
 // Mount routers
 app.use('/api/auth', authRoutes);

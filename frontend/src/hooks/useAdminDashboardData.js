@@ -114,24 +114,29 @@ export function getPaymentDisplayAmount(order) {
   return order?.totalAmount || 0;
 }
 
+// In-memory global cache for admin dashboard data to support instant tab-switching
+let dashboardCache = null;
+
 export default function useAdminDashboardData() {
-  const [orders, setOrders] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [usersList, setUsersList] = useState([]);
-  const [disputes, setDisputes] = useState([]);
-  const [verificationOverview, setVerificationOverview] = useState(null);
-  const [settings, setSettings] = useState(null);
-  const [adOverview, setAdOverview] = useState(null);
-  const [productsList, setProductsList] = useState([]);
-  const [paymentStats, setPaymentStats] = useState(null);
-  const [operationsSummary, setOperationsSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(dashboardCache?.orders || []);
+  const [transactions, setTransactions] = useState(dashboardCache?.transactions || []);
+  const [usersList, setUsersList] = useState(dashboardCache?.usersList || []);
+  const [disputes, setDisputes] = useState(dashboardCache?.disputes || []);
+  const [verificationOverview, setVerificationOverview] = useState(dashboardCache?.verificationOverview || null);
+  const [settings, setSettings] = useState(dashboardCache?.settings || null);
+  const [adOverview, setAdOverview] = useState(dashboardCache?.adOverview || null);
+  const [productsList, setProductsList] = useState(dashboardCache?.productsList || []);
+  const [paymentStats, setPaymentStats] = useState(dashboardCache?.paymentStats || null);
+  const [operationsSummary, setOperationsSummary] = useState(dashboardCache?.operationsSummary || null);
+  const [loading, setLoading] = useState(!dashboardCache);
 
   const fetchData = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      setLoading(true);
+      if (!dashboardCache) {
+        setLoading(true);
+      }
       const [
         resOrders, resTxns, resUsers, resDisputes, resVerification,
         resSettings, resAds, resProducts,
@@ -155,22 +160,58 @@ export default function useAdminDashboardData() {
       const jsonAds = await resAds.json();
       const jsonProducts = await resProducts.json();
 
+      let nextOrders = [];
+      let nextPaymentStats = null;
+      let nextOperationsSummary = null;
       if (jsonOrders.success) {
-        setOrders(jsonOrders.data || []);
-        setPaymentStats(jsonOrders.paymentStats || null);
-        setOperationsSummary(jsonOrders.operationsSummary || null);
+        nextOrders = jsonOrders.data || [];
+        nextPaymentStats = jsonOrders.paymentStats || null;
+        nextOperationsSummary = jsonOrders.operationsSummary || null;
+        setOrders(nextOrders);
+        setPaymentStats(nextPaymentStats);
+        setOperationsSummary(nextOperationsSummary);
       }
-      if (jsonTxns.success) setTransactions(jsonTxns.data || []);
-      if (jsonUsers.success) setUsersList(jsonUsers.data || []);
-      if (jsonVerification.success) setVerificationOverview(jsonVerification.data || null);
-      if (jsonSettings.success) setSettings(jsonSettings.data || null);
-      if (jsonAds.success) setAdOverview(jsonAds.data || null);
-      if (jsonProducts.success) setProductsList(Array.isArray(jsonProducts.data) ? jsonProducts.data : []);
+      
+      const nextTxns = jsonTxns.success ? (jsonTxns.data || []) : [];
+      if (jsonTxns.success) setTransactions(nextTxns);
+
+      const nextUsers = jsonUsers.success ? (jsonUsers.data || []) : [];
+      if (jsonUsers.success) setUsersList(nextUsers);
+
+      const nextVerification = jsonVerification.success ? (jsonVerification.data || null) : null;
+      if (jsonVerification.success) setVerificationOverview(nextVerification);
+
+      const nextSettings = jsonSettings.success ? (jsonSettings.data || null) : null;
+      if (jsonSettings.success) setSettings(nextSettings);
+
+      const nextAds = jsonAds.success ? (jsonAds.data || null) : null;
+      if (jsonAds.success) setAdOverview(nextAds);
+
+      const nextProducts = jsonProducts.success ? (Array.isArray(jsonProducts.data) ? jsonProducts.data : []) : [];
+      if (jsonProducts.success) setProductsList(nextProducts);
+
+      let nextDisputes = [];
       if (jsonDisputes.success) {
-        setDisputes(jsonDisputes.data || []);
+        nextDisputes = jsonDisputes.data || [];
+        setDisputes(nextDisputes);
       } else if (!jsonDisputes.success) {
         toast.error(jsonDisputes.error || 'Could not load order issues');
       }
+
+      // Update the cache
+      dashboardCache = {
+        orders: nextOrders,
+        transactions: nextTxns,
+        usersList: nextUsers,
+        disputes: nextDisputes,
+        verificationOverview: nextVerification,
+        settings: nextSettings,
+        adOverview: nextAds,
+        productsList: nextProducts,
+        paymentStats: nextPaymentStats,
+        operationsSummary: nextOperationsSummary,
+      };
+
     } catch (err) {
       console.error('Failed to load admin stats:', err);
       toast.error('Failed to load dashboard data');
