@@ -4,7 +4,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://gearup-backend.hamzaasifghouri786.workers.dev/api/:path*',
+        destination: 'https://backend-psi-two-xd4abeghtg.vercel.app/api/:path*',
       },
     ];
   },
