@@ -55,15 +55,18 @@ const ManufacturerOrdersPage = () => {
     const [sortBy, setSortBy] = useState('newest');
     const { refundRecords } = useRefundRecords();
 
-    const fetchOrders = useCallback(async () => {
+    const fetchOrders = useCallback(async (isBackground = false) => {
         try {
-            setLoading(true);
+            if (!isBackground && !localStorage.getItem('cached_manufacturer_orders')) {
+                setLoading(true);
+            }
             const response = await fetch(`${getApiBaseUrl()}/api/orders`, {
                 headers: getAuthHeaders(),
             });
             const data = await response.json();
             if (data.success) {
                 setOrders(data.data);
+                localStorage.setItem('cached_manufacturer_orders', JSON.stringify(data.data));
             } else {
                 setError(data.error);
                 if (response.status === 401) {
@@ -78,12 +81,22 @@ const ManufacturerOrdersPage = () => {
     }, []);
 
     useEffect(() => {
-        fetchOrders();
+        // SWR: Load from cache immediately for instant render
+        const cached = localStorage.getItem('cached_manufacturer_orders');
+        if (cached) {
+            try {
+                setOrders(JSON.parse(cached));
+                setLoading(false);
+            } catch (e) {
+                console.error('Error parsing cached orders:', e);
+            }
+        }
+        fetchOrders(true); // Trigger background sync
     }, [fetchOrders]);
 
     useEffect(() => {
         return subscribeFinancialSync(() => {
-            fetchOrders();
+            fetchOrders(true);
         });
     }, [fetchOrders]);
 
